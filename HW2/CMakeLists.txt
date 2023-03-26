@@ -4,10 +4,7 @@
     src/shader.cpp src/shader.h
     src/program.cpp src/program.h
     src/context.cpp src/context.h
-     
-     
-     
-     
+    src/object.cpp src/object.h
 )
 
 # TODO: Add tests and install targets if needed.

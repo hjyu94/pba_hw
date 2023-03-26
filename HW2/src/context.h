@@ -4,6 +4,7 @@
 #include "common.h"
 #include "shader.h"
 #include "program.h"
+#include "object.h"
 
 CLASS_PTR(Context)
 class Context {
@@ -28,6 +29,7 @@ private:
     unsigned int m_ceiling_vbo;
     unsigned int m_ceiling_ebo;
 
+    ObjectUPtr m_object;
     // spring
     float restLength = 3.f;
     glm::vec3 m_spring_com{ glm::vec3(0.0f, -1.0f, 0.0f) };

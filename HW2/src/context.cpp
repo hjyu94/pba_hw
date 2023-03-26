@@ -88,22 +88,9 @@ void Context::Render() {
     //}
     //ImGui::End();
 
-    //std::vector<glm::vec3> cubePositions = {
-    //    glm::vec3( 0.0f, 0.0f, 0.0f),
-    //    glm::vec3( 2.0f, 5.0f, -15.0f),
-    //    glm::vec3(-1.5f, -2.2f, -2.5f),
-    //    glm::vec3(-3.8f, -2.0f, -12.3f),
-    //    glm::vec3( 2.4f, -0.4f, -3.5f),
-    //    glm::vec3(-1.7f, 3.0f, -7.5f),
-    //    glm::vec3( 1.3f, -2.0f, -2.5f),
-    //    glm::vec3( 1.5f, 2.0f, -2.5f),
-    //    glm::vec3( 1.5f, 0.2f, -1.5f),
-    //    glm::vec3(-1.3f, 1.0f, -1.5f),
-    //};
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // 1. camera
     m_cameraFront =
         glm::rotate(
             glm::mat4(1.0f),
@@ -130,93 +117,20 @@ void Context::Render() {
         m_cameraUp
     );
 
-    // 1. Draw ceiling
-    {
-        m_program->Use();
-
-        glBindVertexArray(m_ceiling_vao);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        //auto pos = glm::vec3(0.f, 1.f, 0.f);
-        auto model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(0.f, 0.4f, 0.f));
-        //model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
-        auto transform = projection * view * model;
-
-        m_program->SetUniform("transform", transform);
-    }
-
-    // 2. Draw line
-    {
-        //glBegin(GL_LINE_LOOP);
-        //glVertex3f(0.f, 0.f, 0.f);
-        //glVertex3f(0.f, -1.f, 0.f);
-        //glEnd();
-        
-    }
-    //for (size_t i = 0; i < cubePositions.size(); i++){
-    //    auto& pos = cubePositions[i];
-    //    auto model = glm::translate(glm::mat4(1.0f), pos);
-    //    auto transform = projection * view * model;
-    //    m_program->SetUniform("transform", transform);
-    //    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    //}
-}
+    auto model = glm::mat4(1.0f);
+    //model = glm::translate(model, glm::vec3(0.f, 0.4f, 0.f));
+    //model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
+    
+    auto transform = projection * view * model;
+    m_object->SetMVP(transform);
+    m_object->Render();
+ }
 
 bool Context::Init() {
-    float vertices[] = {
-        0.5f, 0.5f, 0.0f, // top right
-        0.5f, -0.5f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f, // bottom left
-        -0.5f, 0.5f, 0.0f, // top left
-    };
-    uint32_t indices[] = { // note that we start from 0!
-        0, 1, 3, // first triangle
-        1, 2, 3, // second triangle
-    };
-    
-    glGenVertexArrays(1, &m_ceiling_vao);
-    glGenBuffers(1, &m_ceiling_vbo);
-    glGenBuffers(1, &m_ceiling_ebo);
-
-    glBindVertexArray(m_ceiling_vao);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, m_ceiling_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ceiling_ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindVertexArray(0);
-
-
-    ShaderPtr vertShader = Shader::CreateFromFile(std::string(CURRENT_SOURCE_DIR) + std::string("/shader/texture.vs"), GL_VERTEX_SHADER);
-    ShaderPtr fragShader = Shader::CreateFromFile(std::string(CURRENT_SOURCE_DIR) + std::string("/shader/texture.fs"), GL_FRAGMENT_SHADER);
-    if (!vertShader || !fragShader)
-        return false;
-    SPDLOG_INFO("vertex shader id: {}", vertShader->Get());
-    SPDLOG_INFO("fragment shader id: {}", fragShader->Get());
-
-    m_program = Program::Create({fragShader, vertShader});
-    if (!m_program)
-        return false;
-    SPDLOG_INFO("program id: {}", m_program->Get());
+    m_object = Object::Create();
 
     glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
     glEnable(GL_DEPTH_TEST);
-
-    m_program->Use();
-
-    glm::vec4 vec(1.0f,  0.0f, 0.0f, 1.0f);
-    auto trans = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-    auto rot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    auto scale = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f));
-    vec = trans * rot * scale * vec;
-    SPDLOG_INFO("transformed vec: [{}, {}, {}]", vec.x, vec.y, vec.z);
 
     return true;
 }

@@ -7,8 +7,7 @@
 CLASS_PTR(Program)
 class Program {
 public:
-    static ProgramUPtr Create(
-        const std::vector<ShaderPtr>& shaders);
+    static ProgramUPtr Create(const std::vector<ShaderPtr>& shaders);
 
     ~Program();
     uint32_t Get() const { return m_program; }
@@ -19,8 +18,7 @@ public:
 
 private:
     Program() {}
-    bool Link(
-        const std::vector<ShaderPtr>& shaders);
+    bool Link(const std::vector<ShaderPtr>& shaders);
     uint32_t m_program { 0 };
 };
 
