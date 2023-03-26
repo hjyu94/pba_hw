@@ -1,5 +1,6 @@
 #include "context.h"
 #include <imgui.h>
+#include <iostream>
 
 ContextUPtr Context::Create() {
     auto context = ContextUPtr(new Context());
@@ -28,6 +29,8 @@ void Context::ProcessInput(GLFWwindow* window) {
         m_cameraPos += cameraSpeed * cameraUp;
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
         m_cameraPos -= cameraSpeed * cameraUp;
+
+    std::cout << m_cameraPos.x << " " << m_cameraPos.y << " " << m_cameraPos.z << std::endl;
 }
 
 void Context::Reshape(int width, int height) {
@@ -85,100 +88,111 @@ void Context::Render() {
     //}
     //ImGui::End();
 
-    std::vector<glm::vec3> cubePositions = {
-        glm::vec3( 0.0f, 0.0f, 0.0f),
-        glm::vec3( 2.0f, 5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f, -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3( 2.4f, -0.4f, -3.5f),
-        glm::vec3(-1.7f, 3.0f, -7.5f),
-        glm::vec3( 1.3f, -2.0f, -2.5f),
-        glm::vec3( 1.5f, 2.0f, -2.5f),
-        glm::vec3( 1.5f, 0.2f, -1.5f),
-        glm::vec3(-1.3f, 1.0f, -1.5f),
-    };
+    //std::vector<glm::vec3> cubePositions = {
+    //    glm::vec3( 0.0f, 0.0f, 0.0f),
+    //    glm::vec3( 2.0f, 5.0f, -15.0f),
+    //    glm::vec3(-1.5f, -2.2f, -2.5f),
+    //    glm::vec3(-3.8f, -2.0f, -12.3f),
+    //    glm::vec3( 2.4f, -0.4f, -3.5f),
+    //    glm::vec3(-1.7f, 3.0f, -7.5f),
+    //    glm::vec3( 1.3f, -2.0f, -2.5f),
+    //    glm::vec3( 1.5f, 2.0f, -2.5f),
+    //    glm::vec3( 1.5f, 0.2f, -1.5f),
+    //    glm::vec3(-1.3f, 1.0f, -1.5f),
+    //};
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // 1. camera
     m_cameraFront =
-        glm::rotate(glm::mat4(1.0f),
-            glm::radians(m_cameraYaw), glm::vec3(0.0f, 1.0f, 0.0f)) *
-        glm::rotate(glm::mat4(1.0f),
-            glm::radians(m_cameraPitch), glm::vec3(1.0f, 0.0f, 0.0f)) *
-        glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+        glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(m_cameraYaw),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        )
+        * glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(m_cameraPitch),
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        )
+        * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
 
-    auto projection = glm::perspective(glm::radians(45.0f),
-        (float)m_width / (float)m_height, 0.01f, 20.0f);
+    auto projection = glm::perspective(
+        glm::radians(45.0f),
+        (float)m_width / (float)m_height,
+        0.01f,
+        20.0f
+    );
+
     auto view = glm::lookAt(
         m_cameraPos,
         m_cameraPos + m_cameraFront,
-        m_cameraUp);
+        m_cameraUp
+    );
 
-    for (size_t i = 0; i < cubePositions.size(); i++){
-        auto& pos = cubePositions[i];
-        auto model = glm::translate(glm::mat4(1.0f), pos);
-        model = glm::rotate(model,
-            glm::radians((float)glfwGetTime() * 120.0f + 20.0f * (float)i),
-            glm::vec3(1.0f, 0.5f, 0.0f));
+    // 1. Draw ceiling
+    {
+        m_program->Use();
+
+        glBindVertexArray(m_ceiling_vao);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //auto pos = glm::vec3(0.f, 1.f, 0.f);
+        auto model = glm::mat4(1.0f);
+        //model = glm::translate(model, glm::vec3(0.f, 0.4f, 0.f));
+        //model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
         auto transform = projection * view * model;
+
         m_program->SetUniform("transform", transform);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
+
+    // 2. Draw line
+    {
+        //glBegin(GL_LINE_LOOP);
+        //glVertex3f(0.f, 0.f, 0.f);
+        //glVertex3f(0.f, -1.f, 0.f);
+        //glEnd();
+        
+    }
+    //for (size_t i = 0; i < cubePositions.size(); i++){
+    //    auto& pos = cubePositions[i];
+    //    auto model = glm::translate(glm::mat4(1.0f), pos);
+    //    auto transform = projection * view * model;
+    //    m_program->SetUniform("transform", transform);
+    //    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    //}
 }
 
 bool Context::Init() {
     float vertices[] = {
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f, 0.0f, 1.0f,
-
-        -0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f, 1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f, 1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f, 0.0f, 1.0f,
-
-        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f, 1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-
-        -0.5f,  0.5f, -0.5f, 0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f, 0.0f, 0.0f,
+        0.5f, 0.5f, 0.0f, // top right
+        0.5f, -0.5f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f, // bottom left
+        -0.5f, 0.5f, 0.0f, // top left
     };
-
-    uint32_t indices[] = {
-         0,  2,  1,  2,  0,  3,
-         4,  5,  6,  6,  7,  4,
-         8,  9, 10, 10, 11,  8,
-        12, 14, 13, 14, 12, 15,
-        16, 17, 18, 18, 19, 16,
-        20, 22, 21, 22, 20, 23,
+    uint32_t indices[] = { // note that we start from 0!
+        0, 1, 3, // first triangle
+        1, 2, 3, // second triangle
     };
+    
+    glGenVertexArrays(1, &m_ceiling_vao);
+    glGenBuffers(1, &m_ceiling_vbo);
+    glGenBuffers(1, &m_ceiling_ebo);
 
-    m_vertexLayout = VertexLayout::Create();
-    m_vertexBuffer = Buffer::CreateWithData(
-        GL_ARRAY_BUFFER, GL_STATIC_DRAW,
-        vertices, sizeof(float) * 120);
+    glBindVertexArray(m_ceiling_vao);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, m_ceiling_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ceiling_ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    m_vertexLayout->SetAttrib(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, 0);
-    m_vertexLayout->SetAttrib(2, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, sizeof(float) * 3);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
 
-    m_indexBuffer = Buffer::CreateWithData(
-        GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW,
-        indices, sizeof(uint32_t) * 36);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindVertexArray(0);
+
 
     ShaderPtr vertShader = Shader::CreateFromFile(std::string(CURRENT_SOURCE_DIR) + std::string("/shader/texture.vs"), GL_VERTEX_SHADER);
     ShaderPtr fragShader = Shader::CreateFromFile(std::string(CURRENT_SOURCE_DIR) + std::string("/shader/texture.fs"), GL_FRAGMENT_SHADER);

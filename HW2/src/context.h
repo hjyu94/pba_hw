@@ -4,8 +4,6 @@
 #include "common.h"
 #include "shader.h"
 #include "program.h"
-#include "buffer.h"
-#include "vertex_layout.h"
 
 CLASS_PTR(Context)
 class Context {
@@ -22,12 +20,21 @@ private:
     bool Init();
     ProgramUPtr m_program;
 
-    VertexLayoutUPtr m_vertexLayout;
-    BufferUPtr m_vertexBuffer;
-    BufferUPtr m_indexBuffer;
-
     int m_width {640};
     int m_height {480};
+
+    // ceiliing
+    unsigned int m_ceiling_vao;
+    unsigned int m_ceiling_vbo;
+    unsigned int m_ceiling_ebo;
+
+    // spring
+    float restLength = 3.f;
+    glm::vec3 m_spring_com{ glm::vec3(0.0f, -1.0f, 0.0f) };
+    unsigned int m_spring_vao;
+    unsigned int m_spring_vbo;
+    unsigned int m_spring_ebo;
+
 
     // clear color
     glm::vec4 m_clearColor { glm::vec4(0.1f, 0.2f, 0.3f, 0.0f) };
@@ -38,7 +45,7 @@ private:
     float m_cameraPitch { 0.0f };
     float m_cameraYaw { 0.0f };
     glm::vec3 m_cameraFront { glm::vec3(0.0f, -1.0f, 0.0f) };
-    glm::vec3 m_cameraPos { glm::vec3(0.0f, 0.0f, 3.0f) };
+    glm::vec3 m_cameraPos { glm::vec3(0.0f, -1.0f, 5.0f) };
     glm::vec3 m_cameraUp { glm::vec3(0.0f, 1.0f, 0.0f) };
 };
 
