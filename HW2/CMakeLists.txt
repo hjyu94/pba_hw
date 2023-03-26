@@ -23,3 +23,6 @@ target_link_libraries(HW2 PRIVATE
     spdlog::spdlog spdlog::spdlog_header_only
 )
 
+target_compile_definitions(HW2 PUBLIC
+    CURRENT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)

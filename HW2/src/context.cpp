@@ -37,9 +37,8 @@ bool Context::Init() {
         GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW,
         indices, sizeof(uint32_t) * 6);
 
-
-    ShaderPtr vertShader = Shader::CreateFromFile("C:/Users/hjeong/dev/study/graphics/PBA_HW/HW2/shader/simple.vs", GL_VERTEX_SHADER);
-    ShaderPtr fragShader = Shader::CreateFromFile("C:/Users/hjeong/dev/study/graphics/PBA_HW/HW2/shader/simple.fs", GL_FRAGMENT_SHADER);
+    ShaderPtr vertShader = Shader::CreateFromFile(std::string(CURRENT_SOURCE_DIR) + std::string("/shader/simple.vs"), GL_VERTEX_SHADER);
+    ShaderPtr fragShader = Shader::CreateFromFile(std::string(CURRENT_SOURCE_DIR) + std::string("/shader/simple.fs"), GL_FRAGMENT_SHADER);
     if (!vertShader || !fragShader)
         return false;
     SPDLOG_INFO("vertex shader id: {}", vertShader->Get());
