@@ -1,14 +1,14 @@
-#include "object.h"
+#include "mass.h"
 
-ObjectUPtr Object::Create()
+MassUPtr Mass::Create()
 {
-    auto object = ObjectUPtr(new Object());
-    if (!object->Init())
+    auto mass = MassUPtr(new Mass());
+    if (!mass->Init())
         return nullptr;
-    return std::move(object);
+    return std::move(mass);
 }
 
-bool Object::Init()
+bool Mass::Init()
 {
     float vertices[] = {
         0.5f, 0.5f, 0.0f, // top right
@@ -54,12 +54,12 @@ bool Object::Init()
 }
 
 
-int Object::SetMVP(const glm::mat4& mvp) {
+int Mass::SetMVP(const glm::mat4& mvp) {
     m_mvp = mvp;
     return 1;
 }
 
-void Object::Render() {
+void Mass::Render() {
     m_program->Use();
 
     glBindVertexArray(m_vao);
@@ -68,7 +68,7 @@ void Object::Render() {
     m_program->SetUniform("transform", m_mvp);
 }
 
-Object::~Object() {
+Mass::~Mass() {
     glDeleteVertexArrays(1, &m_vao);
     glDeleteBuffers(1, &m_vbo);
 }

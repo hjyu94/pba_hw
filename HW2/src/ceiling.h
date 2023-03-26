@@ -1,23 +1,20 @@
-#ifndef __OBJECT_H__
-#define __OBJECT_H__
+#ifndef __CEILING_H__
+#define __CEILING_H__
 
 #include "common.h"
 #include "program.h"
 
-using namespace glm;
-using namespace std;
-
-CLASS_PTR(Object)
-class Object {
+CLASS_PTR(Ceiling)
+class Ceiling {
 public:
-    static ObjectUPtr Create();
-    ~Object();
+    static CeilingUPtr Create();
+    ~Ceiling();
     
     void Render();
     int SetMVP(const glm::mat4& mvp);
 
 private:
-    Object() {}
+    Ceiling() {}
     bool Init();
     
     ProgramUPtr m_program;
@@ -30,4 +27,4 @@ private:
     glm::mat4 m_mvp{ 1.0f };
 };
 
-#endif // !__OBJECT_H__
+#endif // !__CEILING_H__

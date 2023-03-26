@@ -117,17 +117,30 @@ void Context::Render() {
         m_cameraUp
     );
 
-    auto model = glm::mat4(1.0f);
-    //model = glm::translate(model, glm::vec3(0.f, 0.4f, 0.f));
-    //model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
-    
-    auto transform = projection * view * model;
-    m_object->SetMVP(transform);
-    m_object->Render();
+    // 1. Draw ceiling
+    {
+        auto model = glm::mat4(1.0f);
+        model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
+        auto transform = projection * view * model;
+        
+        m_ceiling->SetMVP(transform);
+        m_ceiling->Render();
+    }
+
+    // 2. Draw mass
+    {
+        auto model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.f, -1.f, 0.f));
+        auto transform = projection * view * model;
+        
+        m_mass->SetMVP(transform);
+        m_mass->Render();
+    }
  }
 
 bool Context::Init() {
-    m_object = Object::Create();
+    m_ceiling = Ceiling::Create();
+    m_mass = Mass::Create();
 
     glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
     glEnable(GL_DEPTH_TEST);

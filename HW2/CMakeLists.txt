@@ -4,7 +4,8 @@
     src/shader.cpp src/shader.h
     src/program.cpp src/program.h
     src/context.cpp src/context.h
-    src/object.cpp src/object.h
+    src/ceiling.cpp src/ceiling.h
+    src/mass.cpp src/mass.h
 )
 
 # TODO: Add tests and install targets if needed.
