@@ -11,5 +11,3 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Include sub-projects.
 add_subdirectory ("HW2")
-
-add_subdirectory ("object_example")

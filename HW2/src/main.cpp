@@ -3,8 +3,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-uint16_t WINDOW_WIDTH = 800;
-uint16_t WINDOW_HEIGHT = 600;
+uint32_t WINDOW_WIDTH = 1200;
+uint32_t WINDOW_HEIGHT = 900;
 
 void OnFramebufferSizeChange(GLFWwindow* window, int width, int height) {
     SPDLOG_INFO("framebuffer size changed: ({} x {})", width, height);
@@ -12,17 +12,9 @@ void OnFramebufferSizeChange(GLFWwindow* window, int width, int height) {
     context->Reshape(width, height);
 }
 
-void OnKeyEvent(GLFWwindow* window,
-    int key, int scancode, int action, int mods) {
+void OnKeyEvent(GLFWwindow* window, int key, int scancode, int action, int mods) {
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
-    //SPDLOG_INFO("key: {}, scancode: {}, action: {}, mods: {}{}{}",
-    //    key, scancode,
-    //    action == GLFW_PRESS ? "Pressed" :
-    //    action == GLFW_RELEASE ? "Released" :
-    //    action == GLFW_REPEAT ? "Repeat" : "Unknown",
-    //    mods & GLFW_MOD_CONTROL ? "C" : "-",
-    //    mods & GLFW_MOD_SHIFT ? "S" : "-",
-    //    mods & GLFW_MOD_ALT ? "A" : "-");
+
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
@@ -73,7 +65,7 @@ int main(int argc, const char** argv) {
 
     // glfw 윈도우 생성, 실패하면 에러 출력후 종료
     SPDLOG_INFO("Create glfw window");
-    auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "HW2", nullptr, nullptr);
+    auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "HW2: ODE solver for a spring-damper system", nullptr, nullptr);
     if (!window) {
         SPDLOG_ERROR("failed to create glfw window");
         glfwTerminate();
@@ -87,8 +79,6 @@ int main(int argc, const char** argv) {
         glfwTerminate();
         return -1;
     }
-    //auto glVersion = glGetString(GL_VERSION);
-    //SPDLOG_INFO("OpenGL context version: {}", glVersion);
 
     auto imguiContext = ImGui::CreateContext();
     ImGui::SetCurrentContext(imguiContext);
@@ -121,7 +111,8 @@ int main(int argc, const char** argv) {
         ImGui::NewFrame();
 
         context->ProcessInput(window);
-        context->Render();
+        context->Update();
+        context->Render(window);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
