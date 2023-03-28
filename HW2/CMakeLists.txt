@@ -30,6 +30,6 @@ target_link_libraries(HW2 PRIVATE
 )
 
 target_compile_definitions(HW2 PUBLIC
-    CURRENT_SOURCE_DIR="."
+    CURRENT_SOURCE_DIR="./"
 )
 

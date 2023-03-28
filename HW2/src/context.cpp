@@ -68,6 +68,12 @@ void Context::MouseButton(int button, int action, double x, double y) {
 }
 
 void Context::Update() {
+#if FILE_LOG_MODE
+    SPDLOG_INFO("time: {}, distance: {}", m_elapsed_time, m_end_point.y);
+    m_elapsed_time += m_timestep;
+#endif
+
+    // solve ODE
     if (std::string(m_current_method) == "Explicit Euler")
     {
         // computation
@@ -92,15 +98,15 @@ void Context::Update() {
         m_end_point.y = next_distance;
         m_current_velocity = next_velocity;
     }
-    else if (std::string(m_current_method) == "Implicit Euler")
-    {
+    else if (std::string(m_current_method) == "Implicit Euler") {
         // computation
         float dfdv = -m_kd / m_mass;
         float dfdx = -m_ks / m_mass;
 
         float current_distance = m_end_point.y;
-        float current_acceleration = -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
-        
+        float current_acceleration =
+                -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
+
         float left = 1 - m_timestep * dfdv - m_timestep * m_timestep * dfdx;
         float right = m_timestep * (current_acceleration + m_timestep * dfdx * m_current_velocity);
         float delta_velocity = right / left;
@@ -125,8 +131,8 @@ void Context::Render(GLFWwindow* window) {
 
         if (ImGui::Button("Restart"))
         {
-            m_end_point = glm::vec3(0.f, m_start_length, 0.f);
-            m_current_velocity = 0.f;
+            SPDLOG_INFO("Restart clicked.");
+            this->InitializeEnvParameter();
         }
 
         ImGui::DragFloat("Start", &m_start_length);
@@ -139,8 +145,10 @@ void Context::Render(GLFWwindow* window) {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
                 bool is_selected = (m_current_method == items[n]);
-                if (ImGui::Selectable(items[n], is_selected))
+                if (ImGui::Selectable(items[n], is_selected)) {
                     m_current_method = items[n];
+                    SPDLOG_INFO("solver changed: {}", m_current_method);
+                }
                 if (is_selected)
                     ImGui::SetItemDefaultFocus();
             }
@@ -192,7 +200,7 @@ void Context::Render(GLFWwindow* window) {
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 
-    // 2. ��
+    // 2. mass
     {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, m_end_point);
@@ -293,9 +301,14 @@ bool Context::Init() {
     }
     
     // environment parameter init
-    m_start_point = glm::vec3(0.f);
-    m_end_point = glm::vec3(0.f, m_start_length, 0.f);
+    this->InitializeEnvParameter();
+    SPDLOG_INFO("default solver: {}", m_current_method);
 
     return true;
 }
 
+void Context::InitializeEnvParameter() {
+    m_elapsed_time = 0.f;
+    m_start_point = glm::vec3(0.f);
+    m_end_point = glm::vec3(0.f, m_start_length, 0.f);
+}

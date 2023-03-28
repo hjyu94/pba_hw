@@ -15,6 +15,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define FILE_LOG_MODE 1
+#if FILE_LOG_MODE
+#include <spdlog/sinks/basic_file_sink.h>
+#endif
+
 #define CLASS_PTR(klassName) \
 class klassName; \
 using klassName ## UPtr = std::unique_ptr<klassName>; \

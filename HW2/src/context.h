@@ -20,6 +20,7 @@ public:
     void Reshape(int width, int height);
     void MouseMove(double x, double y);
     void MouseButton(int button, int action, double x, double y);
+    void InitializeEnvParameter();
 
 private:
     Context() {}
@@ -69,6 +70,7 @@ private:
     float m_mass = 5.f;
     float m_current_velocity = 0.f;
 
+    float m_elapsed_time = 0.f;
     float m_timestep = 0.01f;
     
     const char* m_current_method{"Explicit Euler"};

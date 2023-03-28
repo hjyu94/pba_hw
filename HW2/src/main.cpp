@@ -47,6 +47,11 @@ void Render() {
 }
 
 int main(int argc, const char** argv) {
+#if FILE_LOG_MODE
+    auto logger = spdlog::basic_logger_mt("basic_logger", "logs/logs.txt");
+    spdlog::set_default_logger(logger);
+#endif
+
     // 시작을 알리는 로그
     SPDLOG_INFO("Start program");
 
