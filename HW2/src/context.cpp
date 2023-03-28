@@ -43,9 +43,8 @@ void Context::MouseMove(double x, double y) {
     auto pos = glm::vec2((float)x, (float)y);
     auto deltaPos = pos - m_prevMousePos;
 
-    const float cameraRotSpeed = 0.8f;
-    m_cameraYaw -= deltaPos.x * cameraRotSpeed;
-    m_cameraPitch -= deltaPos.y * cameraRotSpeed;
+    m_cameraYaw -= deltaPos.x * m_cameraRotSpeed;
+    m_cameraPitch -= deltaPos.y * m_cameraRotSpeed;
 
     if (m_cameraYaw < 0.0f)   m_cameraYaw += 360.0f;
     if (m_cameraYaw > 360.0f) m_cameraYaw -= 360.0f;
@@ -57,7 +56,7 @@ void Context::MouseMove(double x, double y) {
 }
 
 void Context::MouseButton(int button, int action, double x, double y) {
-    if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             m_prevMousePos = glm::vec2((float)x, (float)y);
             m_cameraControl = true;
@@ -73,7 +72,7 @@ void Context::Update() {
     {
         // computation
         float current_distance = m_end_point.y;
-        float current_acceleration = - m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_graivity;
+        float current_acceleration = - m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
         float next_velocity = m_current_velocity + m_timestep * current_acceleration;
         float next_distance = current_distance + m_timestep * m_current_velocity;
         
@@ -85,7 +84,7 @@ void Context::Update() {
     {
         // computation
         float current_distance = m_end_point.y;
-        float current_acceleration = -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_graivity;
+        float current_acceleration = -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
         float next_velocity = m_current_velocity + m_timestep * current_acceleration;
         float next_distance = current_distance + m_timestep * next_velocity;
 
@@ -100,7 +99,7 @@ void Context::Update() {
         float dfdx = -m_ks / m_mass;
 
         float current_distance = m_end_point.y;
-        float current_acceleration = -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_graivity;
+        float current_acceleration = -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
         
         float left = 1 - m_timestep * dfdv - m_timestep * m_timestep * dfdx;
         float right = m_timestep * (current_acceleration + m_timestep * dfdx * m_current_velocity);
@@ -118,7 +117,7 @@ void Context::Update() {
 
 void Context::Render(GLFWwindow* window) {
     if (ImGui::Begin("Mass Spring Simulation")) {
-        ImGui::DragFloat("Gravity", &m_graivity);
+        ImGui::DragFloat("Gravity", &m_gravity);
         ImGui::DragFloat("Ks", &m_ks);
         ImGui::DragFloat("Kd", &m_kd);
         ImGui::DragFloat("Mass", &m_mass);
@@ -185,6 +184,7 @@ void Context::Render(GLFWwindow* window) {
     // 1. ceiling
     {
         glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, glm::radians(45.f), glm::vec3(0.f, 1.0f, 0.0f));
         model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.0f, 0.0f, 0.0f));
         m_program->SetUniform("model", model);
 
@@ -192,7 +192,7 @@ void Context::Render(GLFWwindow* window) {
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 
-    // 2. Ãß
+    // 2. ï¿½ï¿½
     {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, m_end_point);

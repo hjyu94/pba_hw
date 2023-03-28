@@ -33,11 +33,12 @@ private:
     glm::vec4 m_clearColor { glm::vec4(0.1f, 0.2f, 0.3f, 0.0f) };
 
     // light parameter
-    glm::vec3 m_lightPos{ 0.f, 5.f, 5.f };
+    glm::vec3 m_lightPos{ 0.f, 5.f, 10.f };
     glm::vec3 m_lightColor{ 0.f, 0.f, 0.f };
 
     // camera parameter
     bool m_cameraControl { false };
+    const float m_cameraRotSpeed = 0.3f;
     glm::vec2 m_prevMousePos { glm::vec2(0.0f) };
     float m_cameraPitch { 0.0f };
     float m_cameraYaw { 0.0f };
@@ -60,7 +61,7 @@ private:
     glm::vec3 m_end_point;
 
     // environment
-    float m_graivity = 9.8f;
+    float m_gravity = 9.8f;
     
     float m_ks = 15.f;
     float m_kd = 1.f;
@@ -69,7 +70,6 @@ private:
     float m_current_velocity = 0.f;
 
     float m_timestep = 0.01f;
-    //float m_timestep = 1.f;
     
     const char* m_current_method{"Explicit Euler"};
     
