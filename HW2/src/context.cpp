@@ -206,7 +206,7 @@ void Context::Render(GLFWwindow* window) {
         model = glm::translate(model, m_end_point);
         m_program->SetUniform("model", model);
         
-        m_model->Draw(m_program.get());
+        m_bead->Draw(m_program.get());
     }
 
     // 3. line
@@ -254,9 +254,9 @@ bool Context::Init() {
 
     SPDLOG_INFO("program id: {}", m_program->Get());
 
-    m_model = Model::Load(std::string(CURRENT_SOURCE_DIR) + std::string("/model/shape.obj"));
+    m_bead = Model::Load(std::string(CURRENT_SOURCE_DIR) + std::string("/model/shape.obj"));
 
-    if (!m_model)
+    if (!m_bead)
         return false;
     
 

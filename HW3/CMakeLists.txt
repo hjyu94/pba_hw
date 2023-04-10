@@ -1,4 +1,4 @@
-add_executable(HW2
+add_executable(HW3
     src/main.cpp
     src/common.cpp src/common.h
     src/shader.cpp src/shader.h
@@ -20,7 +20,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 
-target_link_libraries(HW2 PRIVATE 
+target_link_libraries(HW3 PRIVATE 
     glfw
     glad::glad
     glm::glm
@@ -29,7 +29,7 @@ target_link_libraries(HW2 PRIVATE
     assimp::assimp
 )
 
-target_compile_definitions(HW2 PUBLIC
+target_compile_definitions(HW3 PUBLIC
     CURRENT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 

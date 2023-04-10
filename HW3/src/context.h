@@ -34,7 +34,7 @@ private:
     glm::vec4 m_clearColor { glm::vec4(0.1f, 0.2f, 0.3f, 0.0f) };
 
     // light parameter
-    glm::vec3 m_lightPos{ 0.f, 5.f, 10.f };
+    glm::vec3 m_lightPos{ -5.f, -5.f, 5.f };
     glm::vec3 m_lightColor{ 0.f, 0.f, 0.f };
 
     // camera parameter
@@ -44,26 +44,15 @@ private:
     float m_cameraPitch { 0.0f };
     float m_cameraYaw { 0.0f };
     glm::vec3 m_cameraFront { glm::vec3(0.0f, -1.0f, 0.0f) };
-    glm::vec3 m_cameraPos { glm::vec3(0.0f, 5.0f, 30.0f) };
+    glm::vec3 m_cameraPos { glm::vec3(0.0f, 0.0f, 5.0f) };
     glm::vec3 m_cameraUp { glm::vec3(0.0f, -1.0f, 0.0f) };
 
-    // ceiling
-    uint32_t m_ceiling_vbo{ 0 };
-    uint32_t m_ceiling_vao{ 0 };
-    uint32_t m_ceiling_ebo{ 0 };
-
-    // Ãß
+    ModelUPtr m_wire;
     ModelUPtr m_bead;
-    uint32_t m_mass_vbo{ 0 };
-    uint32_t m_mass_vao{ 0 };
-
-    // line
-    glm::vec3 m_start_point;
-    glm::vec3 m_end_point;
 
     // environment
     float m_gravity = 9.8f;
-    
+    /*
     float m_ks = 15.f;
     float m_kd = 1.f;
     
@@ -76,7 +65,7 @@ private:
     const char* m_current_method{"Explicit Euler"};
     
     float m_start_length = 5.f;
-    float m_rest_length = 5.f;
+    float m_rest_length = 5.f;*/
 };
 
 #endif // __CONTEXT_H__
