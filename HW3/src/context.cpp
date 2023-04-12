@@ -38,21 +38,17 @@ void Context::Reshape(int width, int height) {
 }
 
 void Context::MouseMove(double x, double y) {
-    //if (!m_cameraControl)
-    //    return;
-    //auto pos = glm::vec2((float)x, (float)y);
-    //auto deltaPos = pos - m_prevMousePos;
-
-    //m_cameraYaw -= deltaPos.x * m_cameraRotSpeed;
-    //m_cameraPitch -= deltaPos.y * m_cameraRotSpeed;
-
-    //if (m_cameraYaw < 0.0f)   m_cameraYaw += 360.0f;
-    //if (m_cameraYaw > 360.0f) m_cameraYaw -= 360.0f;
-
-    //if (m_cameraPitch > 89.0f)  m_cameraPitch = 89.0f;
-    //if (m_cameraPitch < -89.0f) m_cameraPitch = -89.0f;
-
-    //m_prevMousePos = pos;    
+    if (!m_cameraControl)
+    {
+        m_mouse_force = glm::vec3(0.f, 0.f, 0.f);
+        return;
+    }
+ 
+    auto pos = glm::vec2((float)x, (float)y);
+    auto deltaPos = pos - m_prevMousePos;
+    
+    m_mouse_force = m_mouse_force_scale * glm::vec3(deltaPos.x, -deltaPos.y, 0.f);
+    SPDLOG_INFO("m_mouse_force: {}, {}", m_mouse_force.x, m_mouse_force.y);
 }
 
 void Context::MouseButton(int button, int action, double x, double y) {
@@ -68,53 +64,27 @@ void Context::MouseButton(int button, int action, double x, double y) {
 }
 
 void Context::Update() {
+    // start of applied force calculation
+    glm::vec3 gravity_force = glm::vec3(0.f, m_bead_mass * m_gravity_acc_y, 0.f);
+    glm::vec3 damping_force = -m_wind_constant * m_bead_velocity;
+    glm::vec3 applied_force = gravity_force + damping_force + m_mouse_force;
+    // end of applied force calculation
 
-    //// solve ODE
-    //if (std::string(m_current_method) == "Explicit Euler")
-    //{
-    //    // computation
-    //    float current_distance = m_end_point.y;
-    //    float current_acceleration = - m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
-    //    float next_velocity = m_current_velocity + m_timestep * current_acceleration;
-    //    float next_distance = current_distance + m_timestep * m_current_velocity;
-    //    
-    //    // setting
-    //    m_end_point.y = next_distance;
-    //    m_current_velocity = next_velocity;
-    //}
-    //else if (std::string(m_current_method) == "Symplectic Euler")
-    //{
-    //    // computation
-    //    float current_distance = m_end_point.y;
-    //    float current_acceleration = -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
-    //    float next_velocity = m_current_velocity + m_timestep * current_acceleration;
-    //    float next_distance = current_distance + m_timestep * next_velocity;
+    // start of lambda calculation
+    float lambda = (-glm::dot(applied_force, m_bead_position) - m_bead_mass * glm::dot(m_bead_velocity, m_bead_velocity)) / glm::dot(m_bead_position, m_bead_position);
+    lambda -= m_feedback_alpha * (glm::dot(m_bead_position, m_bead_position) - 1.f) / 2.f;
+    lambda -= m_feedback_beta * glm::dot(m_bead_position, m_bead_velocity);
+    // end of lambda calculation
 
-    //    // setting
-    //    m_end_point.y = next_distance;
-    //    m_current_velocity = next_velocity;
-    //}
-    //else if (std::string(m_current_method) == "Implicit Euler") {
-    //    // computation
-    //    float dfdv = -m_kd / m_mass;
-    //    float dfdx = -m_ks / m_mass;
+    glm::vec3 constrained_force = lambda * m_bead_position;
+    glm::vec3 bead_acceleration = (applied_force + constrained_force) / m_bead_mass;
 
-    //    float current_distance = m_end_point.y;
-    //    float current_acceleration =
-    //            -m_ks / m_mass * (current_distance - m_rest_length) - m_kd / m_mass * m_current_velocity + m_gravity;
+    // Solve ODE:: Symplectic Euler
+    glm::vec3 next_bead_velocity = m_bead_velocity + m_timestep * bead_acceleration;
+    glm::vec3 next_bead_position = m_bead_position + m_timestep * next_bead_velocity;
 
-    //    float left = 1 - m_timestep * dfdv - m_timestep * m_timestep * dfdx;
-    //    float right = m_timestep * (current_acceleration + m_timestep * dfdx * m_current_velocity);
-    //    float delta_velocity = right / left;
-    //    float delta_distance = m_timestep * (m_current_velocity + delta_velocity);
-
-    //    float next_velocity = m_current_velocity + delta_velocity;
-    //    float next_distance = current_distance + delta_distance;
-
-    //    // setting
-    //    m_end_point.y = next_distance;
-    //    m_current_velocity = next_velocity;
-    //}
+    m_bead_position = next_bead_position;
+    m_bead_velocity = next_bead_velocity;
 }
 
 void Context::Render(GLFWwindow* window) {
@@ -164,7 +134,7 @@ void Context::Render(GLFWwindow* window) {
         m_program->SetUniform("objectColor", glm::vec3(.5f, 1.0f, 0.3f));
     
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+        model = glm::translate(model, m_bead_position);
         m_program->SetUniform("model", model);
         
         m_bead->Draw(m_program.get());
@@ -176,8 +146,8 @@ bool Context::Init() {
     glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
 
     m_program = Program::Create(
-        getRelativePath("/shader/lighting.vs"),
-        getRelativePath("/shader/lighting.fs")
+        std::string("./shader/lighting.vs"),
+        std::string("./shader/lighting.vs")
     );
 
     if (!m_program)
@@ -185,22 +155,12 @@ bool Context::Init() {
 
     SPDLOG_INFO("program id: {}", m_program->Get());
     
-    m_wire = Model::Load(std::string(CURRENT_SOURCE_DIR) + std::string("/model/wire.obj"));
-    m_bead = Model::Load(std::string(CURRENT_SOURCE_DIR) + std::string("/model/sphere.obj"));
+    m_wire = Model::Load(std::string("./model/wire.obj"));
+    m_bead = Model::Load(std::string("./model/sphere.obj"));
 
     if (!m_bead)
         return false;
-    
-
-    // environment parameter init
-    this->InitializeEnvParameter();
-    //SPDLOG_INFO("default solver: {}", m_current_method);
 
     return true;
 }
 
-void Context::InitializeEnvParameter() {
-    /*m_elapsed_time = 0.f;
-    m_start_point = glm::vec3(0.f);
-    m_end_point = glm::vec3(0.f, m_start_length, 0.f);*/
-}

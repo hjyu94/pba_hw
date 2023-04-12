@@ -34,7 +34,7 @@ private:
     glm::vec4 m_clearColor { glm::vec4(0.1f, 0.2f, 0.3f, 0.0f) };
 
     // light parameter
-    glm::vec3 m_lightPos{ -5.f, -5.f, 5.f };
+    glm::vec3 m_lightPos{ -5.f, 5.f, 5.f };
     glm::vec3 m_lightColor{ 0.f, 0.f, 0.f };
 
     // camera parameter
@@ -45,27 +45,26 @@ private:
     float m_cameraYaw { 0.0f };
     glm::vec3 m_cameraFront { glm::vec3(0.0f, -1.0f, 0.0f) };
     glm::vec3 m_cameraPos { glm::vec3(0.0f, 0.0f, 5.0f) };
-    glm::vec3 m_cameraUp { glm::vec3(0.0f, -1.0f, 0.0f) };
+    glm::vec3 m_cameraUp { glm::vec3(0.0f, 1.0f, 0.0f) };
 
     ModelUPtr m_wire;
     ModelUPtr m_bead;
 
     // environment
-    float m_gravity = 9.8f;
-    /*
-    float m_ks = 15.f;
-    float m_kd = 1.f;
-    
-    float m_mass = 5.f;
-    float m_current_velocity = 0.f;
-
-    float m_elapsed_time = 0.f;
     float m_timestep = 0.01f;
+  
+    const float m_wind_constant = 0.3f;
+    const float m_gravity_acc_y = -9.8f;
     
-    const char* m_current_method{"Explicit Euler"};
+    const float m_mouse_force_scale = 0.1f;
+    glm::vec3 m_mouse_force{ glm::vec3(0.f, 0.f, 0.f) };
+
+    const float m_bead_mass = 1.f;
+    glm::vec3 m_bead_position{ glm::vec3(0.f, 1.f, 0.f) };
+    glm::vec3 m_bead_velocity{ glm::vec3(0.f, 0.f, 0.f) };
     
-    float m_start_length = 5.f;
-    float m_rest_length = 5.f;*/
+    const float m_feedback_alpha = 2.f;
+    const float m_feedback_beta = 1.f;
 };
 
 #endif // __CONTEXT_H__
