@@ -101,6 +101,14 @@ void Context::Render(GLFWwindow* window)
     for (auto& sphere : m_spheres)
     {
         sphere->Render(m_program.get());
+
+        //m_program->SetUniform("objectColor", this->m_color);
+
+        //glm::mat4 model = glm::mat4(1.0f);
+        //model = glm::translate(model, this->m_center);
+        //m_program->SetUniform("model", model);
+
+        //sphere->Draw(program);
     }
 }
 

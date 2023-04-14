@@ -32,7 +32,7 @@ private:
     int m_height{ 900 };
 
     // clear color
-    glm::vec4 m_clearColor { glm::vec4(0.1f, 0.2f, 0.3f, 0.0f) };
+    glm::vec4 m_clearColor { glm::vec4(0.0f, 0.0f, 0.0f, 0.0f) };
 
     // light parameter
     glm::vec3 m_lightPos{ -5.f, 5.f, 5.f };

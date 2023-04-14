@@ -22,8 +22,8 @@ private:
 
     ModelUPtr m_model;
 
-    glm::vec3 m_color{ glm::vec3(0.f, 0.f, 0.f) };
-    glm::vec3 m_center{ glm::vec3(0.f, 0.f, 0.f) };
+    glm::vec3 m_color{ glm::vec3(0.5f, 0.5f, 1.f) };
+    glm::vec3 m_center{ glm::vec3(1.f, 0.f, 0.f) };
     float m_radius = 0.f;
 };
 
