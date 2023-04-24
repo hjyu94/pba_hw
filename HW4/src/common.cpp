@@ -43,3 +43,11 @@ std::string getRelativePath(const char* path)
 {
     return std::string(CURRENT_SOURCE_DIR) + std::string(path);
 }
+
+const float getRandomFloat(const int min, const int max)
+{
+    // a 0~1 float
+    // abs(max-min) * a : 0~max float
+    // max * a + min : min ~ max+min
+    return (float)(rand() % 1000) / 1000.f * abs(max - min) + min;
+}

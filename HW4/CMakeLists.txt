@@ -13,7 +13,8 @@ add_executable(${PROJECT_NAME}
     src/mesh.cpp src/mesh.h
     src/model.cpp src/model.h
     src/sphere.cpp src/sphere.h
-)
+    src/AABB.cpp src/AABB.h
+ "src/demo.cpp" "src/AABB.cpp")
 
 # TODO: Add tests and install targets if needed.
 find_package(glad CONFIG REQUIRED)

@@ -11,6 +11,30 @@
 #include "model.h"
 #include "sphere.h"
 
+
+class CompareHelper {
+public:
+    CompareHelper(SpherePtr spherePtr, float value, bool is_start)
+        : m_spherePtr(spherePtr), m_value(value), m_is_start(is_start)
+    {}
+
+    float m_value;
+    SpherePtr m_spherePtr;
+    bool m_is_start;
+    
+    static bool compare(const CompareHelper& a, const CompareHelper& b)
+    {
+        return a.m_value < b.m_value;
+    }
+
+    friend bool operator == (const CompareHelper& a, const CompareHelper& b)
+    {
+        return a.m_spherePtr == b.m_spherePtr;
+    }
+};
+
+using COLLIDING_PAIR = std::pair<SpherePtr, SpherePtr>;
+
 CLASS_PTR(Context)
 class Context {
 public:
@@ -22,6 +46,10 @@ public:
     void MouseMove(double x, double y);
     void MouseButton(int button, int action, double x, double y);
     void InitializeEnvParameter();
+    void ComputeCollision();
+    void SweepAndPrune();
+    void FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_PAIR>& output);
+    void Intersection(std::vector<COLLIDING_PAIR> v1, std::vector<COLLIDING_PAIR> v2, std::vector<COLLIDING_PAIR>& output);
 
 private:
     Context() {}
@@ -48,8 +76,16 @@ private:
     glm::vec3 m_cameraPos { glm::vec3(0.0f, 0.0f, 5.0f) };
     glm::vec3 m_cameraUp { glm::vec3(0.0f, 1.0f, 0.0f) };
 
+    const float m_mouse_force_scale = 0.1f;
+    glm::vec3 m_mouse_force{ glm::vec3(0.f, 0.f, 0.f) };
+
+
     // sphere
     std::vector<SpherePtr> m_spheres;
+    std::vector<COLLIDING_PAIR> m_colliding_spheres;
+
+    // UI
+    int m_view_type = static_cast<int>(View::VIEW_MODEL);
 };
 
 #endif // __CONTEXT_H__

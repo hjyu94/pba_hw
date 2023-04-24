@@ -8,6 +8,11 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <cstdlib>
+#include <ctime>
+#include <math.h>
+#include <algorithm>
+
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <spdlog/spdlog.h>
@@ -29,5 +34,14 @@ using klassName ## WPtr = std::weak_ptr<klassName>;
 std::optional<std::string> LoadTextFile(const std::string& filename);
 glm::vec3 GetAttenuationCoeff(float distance);
 std::string getRelativePath(const char* path);
+const float getRandomFloat(const int min, const int max);
+
+enum class View
+{
+    VIEW_MODEL,
+    VIEW_BROAD,
+    VIEW_NARROW,
+    VIEW_PENETRATION,
+};
 
 #endif // __COMMON_H__

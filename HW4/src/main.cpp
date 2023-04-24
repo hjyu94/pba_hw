@@ -46,7 +46,10 @@ void Render() {
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, const char** argv) 
+{
+    srand((unsigned int)time(NULL));
+
 #if FILE_LOG_MODE
     auto logger = spdlog::basic_logger_mt("basic_logger", "logs/logs.txt");
     spdlog::set_default_logger(logger);
