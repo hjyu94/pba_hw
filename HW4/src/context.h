@@ -10,6 +10,7 @@
 #include "mesh.h"
 #include "model.h"
 #include "sphere.h"
+#include "line.h"
 
 
 class CompareHelper {
@@ -33,7 +34,8 @@ public:
     }
 };
 
-using COLLIDING_PAIR = std::pair<SpherePtr, SpherePtr>;
+using COLLIDING_SPHERE_PAIR = std::pair<SpherePtr, SpherePtr>;
+
 
 CLASS_PTR(Context)
 class Context {
@@ -41,26 +43,31 @@ public:
     static ContextUPtr Create();
     void Render(GLFWwindow* window);
     void Update();
+
     void ProcessInput(GLFWwindow* window);
     void Reshape(int width, int height);
     void MouseMove(double x, double y);
     void MouseButton(int button, int action, double x, double y);
+    void ResetCamera();
+
     void InitializeEnvParameter();
     void ComputeCollision();
     void SweepAndPrune();
-    void FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_PAIR>& output);
-    void Intersection(std::vector<COLLIDING_PAIR> v1, std::vector<COLLIDING_PAIR> v2, std::vector<COLLIDING_PAIR>& output);
+    void FindActuallyOverlappedSpheres();
+    void FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_SPHERE_PAIR>& output);
+    std::vector<COLLIDING_SPHERE_PAIR> Intersection(const std::vector<COLLIDING_SPHERE_PAIR> v1, const std::vector<COLLIDING_SPHERE_PAIR> v2);
 
 private:
     Context() {}
     bool Init();
     ProgramUPtr m_program;
+    ProgramUPtr m_line_program;
 
     int m_width{ 1200 };
     int m_height{ 900 };
 
     // clear color
-    glm::vec4 m_clearColor { glm::vec4(0.0f, 0.0f, 0.0f, 0.0f) };
+    glm::vec4 m_clearColor{ glm::vec4(0.0f, 0.0f, 0.0f, 0.0f) };
 
     // light parameter
     glm::vec3 m_lightPos{ -5.f, 5.f, 5.f };
@@ -69,21 +76,29 @@ private:
     // camera parameter
     bool m_cameraControl { false };
     const float m_cameraRotSpeed = 0.3f;
+    const float m_cameraMovSpeed = 0.2f;
+
     glm::vec2 m_prevMousePos { glm::vec2(0.0f) };
     float m_cameraPitch { 0.0f };
     float m_cameraYaw { 0.0f };
+
     glm::vec3 m_cameraFront { glm::vec3(0.0f, -1.0f, 0.0f) };
-    glm::vec3 m_cameraPos { glm::vec3(0.0f, 0.0f, 5.0f) };
+    glm::vec3 m_cameraPos { glm::vec3(0.0f, 0.0f, 15.0f) };
     glm::vec3 m_cameraUp { glm::vec3(0.0f, 1.0f, 0.0f) };
 
     const float m_mouse_force_scale = 0.1f;
     glm::vec3 m_mouse_force{ glm::vec3(0.f, 0.f, 0.f) };
 
-
-    // sphere
+    // collision detection
     std::vector<SpherePtr> m_spheres;
-    std::vector<COLLIDING_PAIR> m_colliding_spheres;
+    std::vector<LinePtr> m_lines;
+    
+    std::vector<COLLIDING_SPHERE_PAIR> m_broad_colliding_spheres;
+    std::vector<COLLIDING_SPHERE_PAIR> m_narrow_colliding_spheres;
 
+    bool is_broad_computation_necessary = true;
+    bool is_narrow_computation_necessary = true;
+    
     // UI
     int m_view_type = static_cast<int>(View::VIEW_MODEL);
 };

@@ -9,8 +9,8 @@ SpherePtr Sphere::Create() {
 
 void Sphere::Render(const Program* program, const View view_type) {
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::scale(model, glm::vec3(m_radius));
     model = glm::translate(model, this->m_center);
+    model = glm::scale(model, glm::vec3(m_radius));
     program->SetUniform("model", model);
 
     // set color
@@ -20,16 +20,22 @@ void Sphere::Render(const Program* program, const View view_type) {
     case View::VIEW_MODEL:
         objectColor = this->m_color;
         break;
-    default:
+
+    case View::VIEW_BROAD:
+    case View::VIEW_NARROW:
         if (m_isIntersected)
             objectColor = glm::vec3(1.f, 0.f, 0.f);
         else
             objectColor = glm::vec3(0.f, 1.f, 0.f);
         break;
+
+    case View::VIEW_PENETRATION:
+        break;
     }
     program->SetUniform("objectColor", objectColor);
 
-    m_model->Draw(program);
+    if(view_type != View::VIEW_PENETRATION)
+        m_model->Draw(program);
 }
 
 bool Sphere::Init() {
@@ -38,11 +44,10 @@ bool Sphere::Init() {
     if (!m_model)
         return false;
 
-    //m_center = glm::vec3(0.f, 0.f, 0.f);
     m_center = glm::vec3(
-        getRandomFloat(-1.f, 1.f),
-        getRandomFloat(-1.f, 1.f),
-        getRandomFloat(-1.f, 1.f)
+        getRandomFloat(-3.f, 3.f),
+        getRandomFloat(-3.f, 3.f),
+        getRandomFloat(-3.f, 3.f)
     );
 
     m_color = glm::vec3(
@@ -51,16 +56,17 @@ bool Sphere::Init() {
         getRandomFloat(0, 1)
     );
 
-    //m_radius = 2.f;
-    m_radius = getRandomFloat(0.5f, 3.0f);
+    m_radius = getRandomFloat(0.5f, 1.0f);
 
-    SPDLOG_INFO("center: {}, {}, {}", m_center.x, m_center.y, m_center.z);
-    SPDLOG_INFO("radius: {}", m_radius);
+    m_AABB = AABB::Create(
+        m_center - glm::vec3(m_radius, m_radius, m_radius), 
+        m_center + glm::vec3(m_radius, m_radius, m_radius)
+    );
 
-    m_AABB = AABB::Create(m_center - glm::vec3(m_radius, m_radius, m_radius), 
-        m_center + glm::vec3(m_radius, m_radius, m_radius));
+    SPDLOG_INFO("sphere created.");
+    std::cout << *this << std::endl;
+    std::cout << *m_AABB << std::endl;
 
-    SPDLOG_INFO("AABB: {},{} / {},{} / {},{}", m_AABB->m_start_position.x, m_AABB->m_end_position.x, m_AABB->m_start_position.y, m_AABB->m_end_position.y, m_AABB->m_start_position.z, m_AABB->m_end_position.z);
     return true;
 }
 
@@ -87,6 +93,20 @@ const float Sphere::GetRadius()
 const AABBPtr Sphere::GetAABB()
 {
     return m_AABB;
+}
+
+void Sphere::setRadius(const float radius)
+{
+    m_radius = radius;
+}
+
+void Sphere::setCenter(const glm::vec3& center)
+{
+    m_center = center;
+    m_AABB = AABB::Create(
+        m_center - glm::vec3(m_radius, m_radius, m_radius),
+        m_center + glm::vec3(m_radius, m_radius, m_radius)
+    );
 }
 
 Sphere::~Sphere()
