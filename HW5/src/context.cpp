@@ -10,8 +10,13 @@ ContextUPtr Context::Create() {
 }
 
 void Context::ProcessInput(GLFWwindow* window) {
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        is_paused = is_paused ? false : true;
+
     if (!m_cameraControl)
         return;
+
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         m_cameraPos += m_cameraMovSpeed * m_cameraFront;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -68,12 +73,15 @@ void Context::MouseButton(int button, int action, double x, double y) {
 
 void Context::Update() 
 {
+    if (is_paused)
+        return;
+
     // collision detection
     // floor ~ sphere
     for (auto& sphere : m_spheres)
     {
         float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
-        bool is_close = sphere->GetCenter().y < sphere->GetRadius()
+        bool is_close = sphere->GetCenter().y - sphere->GetRadius() < epsilon
             && glm::abs(sphere->GetCenter().x) <= m_plane->m_x
             && glm::abs(sphere->GetCenter().z) <= m_plane->m_z;
         if (is_close && v_rel < 0.f)
@@ -120,41 +128,49 @@ void Context::Update()
         {
             auto sphere = s1;
             auto vrel = glm::dot(n1, p1dot - p2dot);
-            auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
-                ((1 / s1->m_mass) + (1/s2->m_mass) 
-                    + glm::dot(n1, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n1), ra1))
-                    + glm::dot(n1, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n1), ra2))
-                );
 
-            sphere->m_momentum += j * n1;
-            sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+            if (vrel < 0)
+            {
+                auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
+                    ((1 / s1->m_mass) + (1 / s2->m_mass)
+                        + glm::dot(n1, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n1), ra1))
+                        + glm::dot(n1, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n1), ra2))
+                        );
 
-            sphere->m_angular_momentum += glm::cross(ra1, j * n1);
-            sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+                sphere->m_momentum += j * n1;
+                sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+
+                sphere->m_angular_momentum += glm::cross(ra1, j * n1);
+                sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+            }
         }
 
         // for s2
         {
             auto sphere = s2;
             auto vrel = glm::dot(n2, p2dot - p1dot);
-            auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
-                ((1 / s1->m_mass) + (1 / s2->m_mass)
-                    + glm::dot(n2, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n2), ra1))
-                    + glm::dot(n2, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n2), ra2))
-                    );
+            
+            if (vrel < 0)
+            {
+                auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
+                    ((1 / s1->m_mass) + (1 / s2->m_mass)
+                        + glm::dot(n2, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n2), ra1))
+                        + glm::dot(n2, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n2), ra2))
+                        );
 
-            sphere->m_momentum += j * n2;
-            sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+                sphere->m_momentum += j * n2;
+                sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
 
-            sphere->m_angular_momentum += glm::cross(ra2, j * n2);
-            sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+                sphere->m_angular_momentum += glm::cross(ra2, j * n2);
+                sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+            }
         }
     }
 
     // move
     for (auto& sphere : m_spheres)
     {
-        bool isClose = sphere->GetCenter().y < sphere->GetRadius()
+        bool isClose = sphere->GetCenter().y - sphere->GetRadius() < epsilon
             && glm::abs(sphere->GetCenter().x) <= m_plane->m_x
             && glm::abs(sphere->GetCenter().z) <= m_plane->m_z;
         glm::vec3 gravity = glm::vec3(0.f, m_gravity * sphere->m_mass, 0.f);
@@ -197,46 +213,6 @@ void Context::Render(GLFWwindow* window)
 
             if (ImGui::Button("Camera reset"))
                 ResetCamera();
-
-            if (ImGui::Button("Recompute"))
-            {
-                ComputeCollision();
-            }
-
-            if (ImGui::Button("Log"))
-            {
-                SPDLOG_INFO("Log button clicked.");
-                
-                SPDLOG_INFO("Spheres");
-                for (const auto& e : m_spheres)
-                {
-                    std::cout << *e << std::endl;
-                    std::cout << *e->GetAABB() << std::endl;
-                }
-
-                uint32_t i = 0;
-                switch (static_cast<View>(m_view_type))
-                {
-                case View::VIEW_BROAD:
-                    SPDLOG_INFO("Intersected AABB");
-                    i = 0;
-                    for (const auto& e : m_broad_colliding_spheres)
-                        std::cout << i++ << ") " << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
-                    break;
-
-                case View::VIEW_NARROW:
-                case View::VIEW_PENETRATION:
-                    SPDLOG_INFO("Narrow intersected");
-                    i = 0;
-                    for (const auto& e : m_narrow_colliding_spheres)
-                        std::cout << i++ << ") " << *e.first << ", " << *e.second << ", distance: " << e.first->GetRadius() + e.second->GetRadius() - glm::distance(e.first->GetCenter(), e.second->GetCenter()) << std::endl;
-
-                    i = 0;
-                    for (const auto& e : m_lines)
-                        std::cout << i++ << ")" << *e << std::endl;
-                    break;
-                }
-            }
         }
 
         // select view type
@@ -309,7 +285,7 @@ void Context::Render(GLFWwindow* window)
         break;
     }
 
-    m_program->SetUniform("objectColor", glm::vec3(1.f, 0.f, 0.f));
+    m_program->SetUniform("objectColor", glm::vec3(0.3f, 0.4f, 1.f));
     m_plane->Render(m_program.get());
 }
 
@@ -337,7 +313,6 @@ bool Context::Init() {
 
     SPDLOG_INFO("program id: {}", m_line_program->Get());
 
-    m_spheres.push_back(Sphere::Create());
     m_spheres.push_back(Sphere::Create());
     m_spheres.push_back(Sphere::Create());
 
@@ -440,13 +415,6 @@ void Context::SweepAndPrune()
     
     auto temp_output = Intersection(x_colliding_spheres, y_colliding_spheres);
     m_broad_colliding_spheres = Intersection(temp_output, z_colliding_spheres);
-
-    // Log
-    for (auto& e : m_broad_colliding_spheres)
-    {
-        std::cout << "[Intersected AABB]" << std::endl;
-        std::cout << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
-    }
 }
 
 void Context::FindActuallyOverlappedSpheres()
@@ -459,7 +427,6 @@ void Context::FindActuallyOverlappedSpheres()
     SweepAndPrune();
 
     // cacluate narrow colliding pairs
-    SPDLOG_INFO("penetration view log");
     for (auto broad_pair : m_broad_colliding_spheres)
     {
         auto first_sphere = broad_pair.first;
@@ -475,8 +442,6 @@ void Context::FindActuallyOverlappedSpheres()
             glm::vec3 penetrated_point2 = second_sphere->GetCenter() - second_sphere->GetRadius() * ray;
 
             m_lines.push_back(Line::Create(penetrated_point1, penetrated_point2));
-            
-            SPDLOG_INFO("p1: {}, {}, {} / p2: {}, {}, {}", penetrated_point1.x, penetrated_point1.y, penetrated_point1.z, penetrated_point2.x, penetrated_point2.y, penetrated_point2.z);
         }
     }
 }
@@ -516,87 +481,6 @@ std::vector<COLLIDING_SPHERE_PAIR> Context::Intersection(const std::vector<COLLI
         }
     }
     return output;
-}
-
-void Context::FindAllCollisions()
-{
-    //// find contact between spheres
-    //FindActuallyOverlappedSpheres();
-    //m_narrow_colliding_spheres;
-
-    // find contact between sphere and plane
-    for (auto& sphere : m_spheres)
-    {
-        float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
-        bool is_close = sphere->GetCenter().y < sphere->GetRadius();
-        if (is_close && v_rel < 0.f)
-        {
-            auto contact = Contact::Create(sphere, m_plane, sphere->GetCenter() - glm::vec3(0, sphere->GetRadius(), 0), glm::vec3(0, 1, 0));
-            m_contacts.push_back(contact);
-        }
-    }
-
-    bool had_collision;
-    const double epsilon = 0.5f;
-
-    do {
-        for (auto& contact : m_contacts)
-        {
-            if (IsColliding(contact))
-            {
-                Collision(contact);
-
-            }
-        }
-    } while (had_collision == true);
-
-    //for (auto& sphere : m_spheres)
-    //{
-    //    float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
-    //    bool is_close = sphere->GetCenter().y < sphere->GetRadius();
-    //    if (is_close && v_rel < 0.f)
-    //    {
-    //        float j = -sphere->m_mass * (1 + m_coefficient_of_restitution) * v_rel;
-    //        glm::vec3 impulse = glm::vec3(0, j, 0);
-    //        sphere->m_momentum += impulse;
-    //        sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
-    //    }
-    //}
-    
-}
-
-bool Context::IsColliding(const ContactPtr contact)
-{
-    auto& a = contact->a;
-    auto& b = contact->b;
-
-    glm::vec3 padot = typeid(a) == typeid(SpherePtr) ?
-        a->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
-
-    glm::vec3 pbdot = typeid(b) == typeid(SpherePtr) ?
-        b->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
-
-    float vrel = glm::dot(contact->n, padot - pbdot);
-    
-    if (vrel < m_colliding_threshold)
-        return true;
-}
-
-void Context::Collision(const ContactPtr contact)
-{
-    auto& a = contact->a;
-    auto& b = contact->b;
-
-    glm::vec3 padot = typeid(a) == typeid(SpherePtr) ?
-        a->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
-
-    glm::vec3 pbdot = typeid(b) == typeid(SpherePtr) ?
-        b->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
-
-    glm::vec3 n = contact->n;
-
-    //auto ra = typeid(a) == typeid(SpherePtr) ?
-    //    dynamic_cast<Sphere*>(rbp)
 }
 
 void Context::ResetCamera()

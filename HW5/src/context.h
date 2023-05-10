@@ -12,7 +12,6 @@
 #include "sphere.h"
 #include "line.h"
 #include "plane.h"
-#include "contact.h"
 
 class CompareHelper {
 public:
@@ -57,10 +56,6 @@ public:
     void FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_SPHERE_PAIR>& output);
     std::vector<COLLIDING_SPHERE_PAIR> Intersection(const std::vector<COLLIDING_SPHERE_PAIR> v1, const std::vector<COLLIDING_SPHERE_PAIR> v2);
 
-    void FindAllCollisions();
-    bool IsColliding(const ContactPtr contact);
-    void Collision(const ContactPtr contact);
-
 private:
     Context() {}
     bool Init();
@@ -101,8 +96,6 @@ private:
     std::vector<COLLIDING_SPHERE_PAIR> m_broad_colliding_spheres;
     std::vector<COLLIDING_SPHERE_PAIR> m_narrow_colliding_spheres;
 
-    std::vector<ContactPtr> m_contacts;
-
     // UI
     int m_view_type = static_cast<int>(View::VIEW_MODEL);
 
@@ -110,6 +103,9 @@ private:
     float m_timestep = 0.01f;
     float m_gravity = -9.8f;
     float m_colliding_threshold = 0.05f;
+
+    float is_paused = false;
+    float epsilon = 0.01f;
 };
 
 #endif // __CONTEXT_H__
