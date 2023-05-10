@@ -52,9 +52,9 @@ bool Sphere::Init() {
         return false;
 
     m_center = glm::vec3(
-        getRandomFloat(-3.f, 3.f),
-        getRandomFloat(-3.f, 3.f),
-        getRandomFloat(-3.f, 3.f)
+        getRandomFloat(-2.f, 2.f),
+        getRandomFloat(4.f, 7.f),
+        getRandomFloat(-2.f, 2.f)
     );
 
     m_color = glm::vec3(
@@ -74,14 +74,24 @@ bool Sphere::Init() {
     std::cout << *this << std::endl;
     std::cout << *m_AABB << std::endl;
 
-    m_mass = 1.f; // getRandomFloat(3.f, 5.f)
+    m_mass = m_radius * getRandomFloat(0.8f, 1.2f);
     m_inertia = 0.4 * m_mass * m_radius * m_radius;
 
-    m_velocity = glm::vec3{ 1.f, 0.f, 0.f };
+    m_velocity = glm::vec3{
+        getRandomFloat(-0.8f, +0.8f),
+        0.f,
+        getRandomFloat(-0.8f, +0.8f)
+    };
+
     //m_velocity = glm::vec3{ 0.f, 0.f, 0.f };
     m_momentum = m_mass * m_velocity;
 
-    m_angular_vel = glm::vec3{ 6.f, 6.f, 0.f };
+    m_angular_vel = glm::vec3{ 
+        getRandomFloat(-0.5f, 0.5f),
+        getRandomFloat(-0.5f, 0.5f),
+        getRandomFloat(-0.5f, 0.5f)
+    };
+
     //m_angular_vel = glm::vec3{ 0.f, 0.f, 0.f };
     m_angular_momentum = m_inertia * m_angular_vel;
 

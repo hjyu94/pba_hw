@@ -12,8 +12,8 @@ public:
     void Render(const Program* program);
     bool Init();
     
-    float m_x = 5.f;
-    float m_z = 5.f;
+    float m_x = 10.f;
+    float m_z = 10.f;
 
 private:
     Plane() {}

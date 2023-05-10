@@ -165,92 +165,92 @@ void Context::Update()
 
 void Context::Render(GLFWwindow* window) 
 {
-    //// start of ui
-    //if (ImGui::Begin("Mass Spring Simulation")) {
-    //    // number of sphere
-    //    {
-    //        ImGui::Text("number of sphere: %d", m_spheres.size());
-    //        ImGui::SameLine();
+    // start of ui
+    if (ImGui::Begin("Mass Spring Simulation")) {
+        // number of sphere
+        {
+            ImGui::Text("number of sphere: %d", m_spheres.size());
+            ImGui::SameLine();
 
-    //        if (ImGui::Button("++") && m_spheres.size() <= 19)
-    //        {
-    //            m_spheres.push_back(Sphere::Create());
-    //            ComputeCollision();
-    //        }
-    //        ImGui::SameLine();
+            if (ImGui::Button("++") && m_spheres.size() <= 19)
+            {
+                m_spheres.push_back(Sphere::Create());
+                ComputeCollision();
+            }
+            ImGui::SameLine();
 
-    //        if (ImGui::Button("--") && m_spheres.size() >= 1)
-    //        {
-    //            m_spheres.pop_back();
-    //            ComputeCollision();
-    //        }
+            if (ImGui::Button("--") && m_spheres.size() >= 1)
+            {
+                m_spheres.pop_back();
+                ComputeCollision();
+            }
 
-    //        if (ImGui::Button("Recreate"))
-    //        {
-    //            const uint32_t count = m_spheres.size();
-    //            m_spheres.clear();
-    //            for (uint32_t i = 0; i < count; ++i)
-    //                m_spheres.push_back(Sphere::Create());
-    //            
-    //            ComputeCollision();
-    //        }
+            if (ImGui::Button("Recreate"))
+            {
+                const uint32_t count = m_spheres.size();
+                m_spheres.clear();
+                for (uint32_t i = 0; i < count; ++i)
+                    m_spheres.push_back(Sphere::Create());
+                
+                ComputeCollision();
+            }
 
-    //        if (ImGui::Button("Camera reset"))
-    //            ResetCamera();
+            if (ImGui::Button("Camera reset"))
+                ResetCamera();
 
-    //        if (ImGui::Button("Recompute"))
-    //        {
-    //            ComputeCollision();
-    //        }
+            if (ImGui::Button("Recompute"))
+            {
+                ComputeCollision();
+            }
 
-    //        if (ImGui::Button("Log"))
-    //        {
-    //            SPDLOG_INFO("Log button clicked.");
-    //            
-    //            SPDLOG_INFO("Spheres");
-    //            for (const auto& e : m_spheres)
-    //            {
-    //                std::cout << *e << std::endl;
-    //                std::cout << *e->GetAABB() << std::endl;
-    //            }
+            if (ImGui::Button("Log"))
+            {
+                SPDLOG_INFO("Log button clicked.");
+                
+                SPDLOG_INFO("Spheres");
+                for (const auto& e : m_spheres)
+                {
+                    std::cout << *e << std::endl;
+                    std::cout << *e->GetAABB() << std::endl;
+                }
 
-    //            uint32_t i = 0;
-    //            switch (static_cast<View>(m_view_type))
-    //            {
-    //            case View::VIEW_BROAD:
-    //                SPDLOG_INFO("Intersected AABB");
-    //                i = 0;
-    //                for (const auto& e : m_broad_colliding_spheres)
-    //                    std::cout << i++ << ") " << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
-    //                break;
+                uint32_t i = 0;
+                switch (static_cast<View>(m_view_type))
+                {
+                case View::VIEW_BROAD:
+                    SPDLOG_INFO("Intersected AABB");
+                    i = 0;
+                    for (const auto& e : m_broad_colliding_spheres)
+                        std::cout << i++ << ") " << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
+                    break;
 
-    //            case View::VIEW_NARROW:
-    //            case View::VIEW_PENETRATION:
-    //                SPDLOG_INFO("Narrow intersected");
-    //                i = 0;
-    //                for (const auto& e : m_narrow_colliding_spheres)
-    //                    std::cout << i++ << ") " << *e.first << ", " << *e.second << ", distance: " << e.first->GetRadius() + e.second->GetRadius() - glm::distance(e.first->GetCenter(), e.second->GetCenter()) << std::endl;
+                case View::VIEW_NARROW:
+                case View::VIEW_PENETRATION:
+                    SPDLOG_INFO("Narrow intersected");
+                    i = 0;
+                    for (const auto& e : m_narrow_colliding_spheres)
+                        std::cout << i++ << ") " << *e.first << ", " << *e.second << ", distance: " << e.first->GetRadius() + e.second->GetRadius() - glm::distance(e.first->GetCenter(), e.second->GetCenter()) << std::endl;
 
-    //                i = 0;
-    //                for (const auto& e : m_lines)
-    //                    std::cout << i++ << ")" << *e << std::endl;
-    //                break;
-    //            }
-    //        }
-    //    }
+                    i = 0;
+                    for (const auto& e : m_lines)
+                        std::cout << i++ << ")" << *e << std::endl;
+                    break;
+                }
+            }
+        }
 
-    //    // select view type
-    //    if (ImGui::RadioButton("Model View", &m_view_type, (int)View::VIEW_MODEL))
-    //        ComputeCollision();
-    //    if (ImGui::RadioButton("Broad view", &m_view_type, (int)View::VIEW_BROAD))
-    //        ComputeCollision();
-    //    if (ImGui::RadioButton("Narrow view", &m_view_type, (int)View::VIEW_NARROW))
-    //        ComputeCollision();
-    //    if (ImGui::RadioButton("Penetration view", &m_view_type, (int)View::VIEW_PENETRATION))
-    //        ComputeCollision();
-    //}
-    //ImGui::End();
-    //// end of ui
+        // select view type
+        if (ImGui::RadioButton("Model View", &m_view_type, (int)View::VIEW_MODEL))
+            ComputeCollision();
+        if (ImGui::RadioButton("Broad view", &m_view_type, (int)View::VIEW_BROAD))
+            ComputeCollision();
+        if (ImGui::RadioButton("Narrow view", &m_view_type, (int)View::VIEW_NARROW))
+            ComputeCollision();
+        if (ImGui::RadioButton("Penetration view", &m_view_type, (int)View::VIEW_PENETRATION))
+            ComputeCollision();
+    }
+    ImGui::End();
+    // end of ui
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -337,30 +337,9 @@ bool Context::Init() {
 
     SPDLOG_INFO("program id: {}", m_line_program->Get());
 
-    {
-        SpherePtr sphere = Sphere::Create();
-        sphere->setCenter(glm::vec3(-3.f, 10.f, 0.f));
-        sphere->setRadius(0.7);
-        sphere->m_velocity = glm::vec3{ 1.f, 0.f, 0.f };
-        sphere->m_momentum = sphere->m_mass * sphere->m_velocity;
-        sphere->m_angular_vel = glm::vec3{ 6.f, 6.f, 0.f };
-        sphere->m_angular_momentum = sphere->m_inertia * sphere->m_angular_vel;
-        sphere->m_quaternion = glm::angleAxis(0.f, glm::normalize(sphere->m_angular_vel));
-
-        m_spheres.push_back(sphere);
-    }
-    {
-        SpherePtr sphere = Sphere::Create();
-        sphere->setCenter(glm::vec3(3.f, 10.f, 0.f));
-        sphere->setRadius(0.7);
-        sphere->m_velocity = glm::vec3{ -1.f, 0.f, 0.f };
-        sphere->m_momentum = sphere->m_mass * sphere->m_velocity;
-        sphere->m_angular_vel = glm::vec3{ 6.f, 6.f, 0.f };
-        sphere->m_angular_momentum = sphere->m_inertia * sphere->m_angular_vel;
-        sphere->m_quaternion = glm::angleAxis(0.f, glm::normalize(sphere->m_angular_vel));
-
-        m_spheres.push_back(sphere);
-    }
+    m_spheres.push_back(Sphere::Create());
+    m_spheres.push_back(Sphere::Create());
+    m_spheres.push_back(Sphere::Create());
 
     m_plane = Plane::Create();
 
