@@ -66,117 +66,191 @@ void Context::MouseButton(int button, int action, double x, double y) {
     }
 }
 
-using namespace std;
+void Context::Update() 
+{
+    // collision detection
+    // floor ~ sphere
+    for (auto& sphere : m_spheres)
+    {
+        float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
+        bool is_close = sphere->GetCenter().y < sphere->GetRadius()
+            && glm::abs(sphere->GetCenter().x) <= m_plane->m_x
+            && glm::abs(sphere->GetCenter().z) <= m_plane->m_z;
+        if (is_close && v_rel < 0.f)
+        {
+            //auto contact = Contact::Create(sphere, m_plane, sphere->GetCenter() - glm::vec3(0, sphere->GetRadius(), 0), glm::vec3(0, 1, 0));
+            //m_contacts.push_back(contact);
+            auto pa = glm::vec3(sphere->GetCenter().x, 0, sphere->GetCenter().z);
+            auto padot = sphere->m_velocity + glm::cross(sphere->m_angular_vel, pa - sphere->GetCenter());
+            auto n = glm::vec3(0, 1, 0);
+            auto vrel = glm::dot(n, padot);
+            auto ra = pa - sphere->GetCenter();
+            auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
+                ((1 / sphere->m_mass) + glm::dot(n, (1 / sphere->m_inertia) * glm::cross(glm::cross(ra, n), ra)));
 
-void Context::Update() {
-    //mRigidSphere[0]->Update(mSimulationTime, mSimulationDeltaTime);
-    //mRigidSphere[0]->UpdateWorldQuantities();
+            sphere->m_momentum += j * n;
+            sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
 
-    DoCollisionDetection();
-    DoCollisionResponse(mSimulationTime, mSimulationDeltaTime);
-    mSimulationTime += mSimulationDeltaTime;
+            sphere->m_angular_momentum += glm::cross(ra, j * n);
+            sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+        }
+    }
 
-    //cout << mRigidSphere[0]->m_sphere->GetCenter().y << endl;
+    // sphere ~ sphere
+    FindActuallyOverlappedSpheres();
+
+    for (auto& pair : m_narrow_colliding_spheres)
+    {
+        auto s1 = pair.first;
+        auto s2 = pair.second;
+
+        auto p1 = s1->GetCenter() + s1->GetRadius() * glm::normalize(s2->GetCenter() - s1->GetCenter());
+        auto p1dot = s1->m_velocity + glm::cross(s1->m_angular_vel, p1 - s1->GetCenter());
+
+        auto p2 = s2->GetCenter() + s2->GetRadius() * glm::normalize(s1->GetCenter() - s2->GetCenter());
+        auto p2dot = s2->m_velocity + glm::cross(s2->m_angular_vel, p2 - s2->GetCenter());
+        
+        auto n1 = glm::normalize(s1->GetCenter() - s2->GetCenter());
+        auto n2 = glm::normalize(s2->GetCenter() - s1->GetCenter());
+
+        auto ra1 = p1 - s1->GetCenter();
+        auto ra2 = p2 - s2->GetCenter();
+
+        // for s1
+        {
+            auto sphere = s1;
+            auto vrel = glm::dot(n1, p1dot - p2dot);
+            auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
+                ((1 / s1->m_mass) + (1/s2->m_mass) 
+                    + glm::dot(n1, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n1), ra1))
+                    + glm::dot(n1, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n1), ra2))
+                );
+
+            sphere->m_momentum += j * n1;
+            sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+
+            sphere->m_angular_momentum += glm::cross(ra1, j * n1);
+            sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+        }
+
+        // for s2
+        {
+            auto sphere = s2;
+            auto vrel = glm::dot(n2, p2dot - p1dot);
+            auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
+                ((1 / s1->m_mass) + (1 / s2->m_mass)
+                    + glm::dot(n2, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n2), ra1))
+                    + glm::dot(n2, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n2), ra2))
+                    );
+
+            sphere->m_momentum += j * n2;
+            sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+
+            sphere->m_angular_momentum += glm::cross(ra2, j * n2);
+            sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+        }
+    }
+
+    // move
+    for (auto& sphere : m_spheres)
+    {
+        bool isClose = sphere->GetCenter().y < sphere->GetRadius()
+            && glm::abs(sphere->GetCenter().x) <= m_plane->m_x
+            && glm::abs(sphere->GetCenter().z) <= m_plane->m_z;
+        glm::vec3 gravity = glm::vec3(0.f, m_gravity * sphere->m_mass, 0.f);
+        glm::vec3 force = isClose ? glm::vec3(0.f, 0.f, 0.f) : gravity;
+        sphere->move(force, m_timestep);
+    }
 }
 
 void Context::Render(GLFWwindow* window) 
 {
-    // start of ui
-    if (ImGui::Begin("Mass Spring Simulation")) {
-        // number of sphere
-        {
-            //ImGui::Text("number of sphere: %d", m_spheres.size());
-            //ImGui::SameLine();
+    //// start of ui
+    //if (ImGui::Begin("Mass Spring Simulation")) {
+    //    // number of sphere
+    //    {
+    //        ImGui::Text("number of sphere: %d", m_spheres.size());
+    //        ImGui::SameLine();
 
-            //if (ImGui::Button("++") && m_spheres.size() <= 19)
-            //{
-            //    is_broad_computation_necessary = true;
-            //    is_narrow_computation_necessary = true;
-            //    
-            //    m_spheres.push_back(Sphere::Create());
-            //    ComputeCollision();
-            //}
-            //ImGui::SameLine();
+    //        if (ImGui::Button("++") && m_spheres.size() <= 19)
+    //        {
+    //            m_spheres.push_back(Sphere::Create());
+    //            ComputeCollision();
+    //        }
+    //        ImGui::SameLine();
 
-            //if (ImGui::Button("--") && m_spheres.size() >= 1)
-            //{
-            //    is_broad_computation_necessary = true;
-            //    is_narrow_computation_necessary = true;
+    //        if (ImGui::Button("--") && m_spheres.size() >= 1)
+    //        {
+    //            m_spheres.pop_back();
+    //            ComputeCollision();
+    //        }
 
-            //    m_spheres.pop_back();
-            //    ComputeCollision();
-            //}
+    //        if (ImGui::Button("Recreate"))
+    //        {
+    //            const uint32_t count = m_spheres.size();
+    //            m_spheres.clear();
+    //            for (uint32_t i = 0; i < count; ++i)
+    //                m_spheres.push_back(Sphere::Create());
+    //            
+    //            ComputeCollision();
+    //        }
 
-            //if (ImGui::Button("Recreate"))
-            //{
-            //    const uint32_t count = m_spheres.size();
-            //    m_spheres.clear();
-            //    for (uint32_t i = 0; i < count; ++i)
-            //        m_spheres.push_back(Sphere::Create());
-            //    
-            //    is_broad_computation_necessary = true;
-            //    is_narrow_computation_necessary = true;
-            //    ComputeCollision();
-            //}
+    //        if (ImGui::Button("Camera reset"))
+    //            ResetCamera();
 
-            //if (ImGui::Button("Camera reset"))
-            //    ResetCamera();
+    //        if (ImGui::Button("Recompute"))
+    //        {
+    //            ComputeCollision();
+    //        }
 
-            //if (ImGui::Button("Recompute"))
-            //{
-            //    is_broad_computation_necessary = true;
-            //    is_narrow_computation_necessary = true;
-            //    ComputeCollision();
-            //}
+    //        if (ImGui::Button("Log"))
+    //        {
+    //            SPDLOG_INFO("Log button clicked.");
+    //            
+    //            SPDLOG_INFO("Spheres");
+    //            for (const auto& e : m_spheres)
+    //            {
+    //                std::cout << *e << std::endl;
+    //                std::cout << *e->GetAABB() << std::endl;
+    //            }
 
-            //if (ImGui::Button("Log"))
-            //{
-            //    SPDLOG_INFO("Log button clicked.");
-            //    
-            //    SPDLOG_INFO("Spheres");
-            //    for (const auto& e : m_spheres)
-            //    {
-            //        std::cout << *e << std::endl;
-            //        std::cout << *e->GetAABB() << std::endl;
-            //    }
+    //            uint32_t i = 0;
+    //            switch (static_cast<View>(m_view_type))
+    //            {
+    //            case View::VIEW_BROAD:
+    //                SPDLOG_INFO("Intersected AABB");
+    //                i = 0;
+    //                for (const auto& e : m_broad_colliding_spheres)
+    //                    std::cout << i++ << ") " << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
+    //                break;
 
-            //    uint32_t i = 0;
-            //    switch (static_cast<View>(m_view_type))
-            //    {
-            //    case View::VIEW_BROAD:
-            //        SPDLOG_INFO("Intersected AABB");
-            //        i = 0;
-            //        for (const auto& e : m_broad_colliding_spheres)
-            //            std::cout << i++ << ") " << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
-            //        break;
+    //            case View::VIEW_NARROW:
+    //            case View::VIEW_PENETRATION:
+    //                SPDLOG_INFO("Narrow intersected");
+    //                i = 0;
+    //                for (const auto& e : m_narrow_colliding_spheres)
+    //                    std::cout << i++ << ") " << *e.first << ", " << *e.second << ", distance: " << e.first->GetRadius() + e.second->GetRadius() - glm::distance(e.first->GetCenter(), e.second->GetCenter()) << std::endl;
 
-            //    case View::VIEW_NARROW:
-            //    case View::VIEW_PENETRATION:
-            //        SPDLOG_INFO("Narrow intersected");
-            //        i = 0;
-            //        for (const auto& e : m_narrow_colliding_spheres)
-            //            std::cout << i++ << ") " << *e.first << ", " << *e.second << ", distance: " << e.first->GetRadius() + e.second->GetRadius() - glm::distance(e.first->GetCenter(), e.second->GetCenter()) << std::endl;
+    //                i = 0;
+    //                for (const auto& e : m_lines)
+    //                    std::cout << i++ << ")" << *e << std::endl;
+    //                break;
+    //            }
+    //        }
+    //    }
 
-            //        i = 0;
-            //        for (const auto& e : m_lines)
-            //            std::cout << i++ << ")" << *e << std::endl;
-            //        break;
-            //    }
-            //}
-        }
-
-        //// select view type
-        //if (ImGui::RadioButton("Model View", &m_view_type, (int)View::VIEW_MODEL))
-        //    ComputeCollision();
-        //if (ImGui::RadioButton("Broad view", &m_view_type, (int)View::VIEW_BROAD))
-        //    ComputeCollision();
-        //if (ImGui::RadioButton("Narrow view", &m_view_type, (int)View::VIEW_NARROW))
-        //    ComputeCollision();
-        //if (ImGui::RadioButton("Penetration view", &m_view_type, (int)View::VIEW_PENETRATION))
-        //    ComputeCollision();
-    }
-    ImGui::End();
-    // end of ui
+    //    // select view type
+    //    if (ImGui::RadioButton("Model View", &m_view_type, (int)View::VIEW_MODEL))
+    //        ComputeCollision();
+    //    if (ImGui::RadioButton("Broad view", &m_view_type, (int)View::VIEW_BROAD))
+    //        ComputeCollision();
+    //    if (ImGui::RadioButton("Narrow view", &m_view_type, (int)View::VIEW_NARROW))
+    //        ComputeCollision();
+    //    if (ImGui::RadioButton("Penetration view", &m_view_type, (int)View::VIEW_PENETRATION))
+    //        ComputeCollision();
+    //}
+    //ImGui::End();
+    //// end of ui
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -212,10 +286,10 @@ void Context::Render(GLFWwindow* window)
         m_program->SetUniform("viewPos", m_cameraPos);
         m_program->SetUniform("lightColor", glm::vec3(1.f, 1.f, 1.f));
 
-        //for (auto& sphere : m_spheres)
-        //{
-        //    sphere->Render(m_program.get());
-        //}
+        for (auto& sphere : m_spheres)
+        {
+            sphere->Render(m_program.get(), static_cast<View>(m_view_type));
+        }
         break;
 
     case View::VIEW_PENETRATION:
@@ -234,8 +308,9 @@ void Context::Render(GLFWwindow* window)
         }
         break;
     }
-    
-    mRigidSphere[0]->m_sphere->Render(m_program.get());
+
+    m_program->SetUniform("objectColor", glm::vec3(1.f, 0.f, 0.f));
+    m_plane->Render(m_program.get());
 }
 
 bool Context::Init() {
@@ -262,382 +337,287 @@ bool Context::Init() {
 
     SPDLOG_INFO("program id: {}", m_line_program->Get());
 
+    {
+        SpherePtr sphere = Sphere::Create();
+        sphere->setCenter(glm::vec3(-3.f, 10.f, 0.f));
+        sphere->setRadius(0.7);
+        sphere->m_velocity = glm::vec3{ 1.f, 0.f, 0.f };
+        sphere->m_momentum = sphere->m_mass * sphere->m_velocity;
+        sphere->m_angular_vel = glm::vec3{ 6.f, 6.f, 0.f };
+        sphere->m_angular_momentum = sphere->m_inertia * sphere->m_angular_vel;
+        sphere->m_quaternion = glm::angleAxis(0.f, glm::normalize(sphere->m_angular_vel));
 
+        m_spheres.push_back(sphere);
+    }
+    {
+        SpherePtr sphere = Sphere::Create();
+        sphere->setCenter(glm::vec3(3.f, 10.f, 0.f));
+        sphere->setRadius(0.7);
+        sphere->m_velocity = glm::vec3{ -1.f, 0.f, 0.f };
+        sphere->m_momentum = sphere->m_mass * sphere->m_velocity;
+        sphere->m_angular_vel = glm::vec3{ 6.f, 6.f, 0.f };
+        sphere->m_angular_momentum = sphere->m_inertia * sphere->m_angular_vel;
+        sphere->m_quaternion = glm::angleAxis(0.f, glm::normalize(sphere->m_angular_vel));
 
-    mRigidSphere.push_back(std::make_shared<RigidSphere>(10000.f));
-    initializeSpheres();
+        m_spheres.push_back(sphere);
+    }
 
+    m_plane = Plane::Create();
 
-    //double radius{}, massDensity{};
-    //Vector3<double> position{}, linearVelocity{}, angularVelocity{};
-    //Quaternion<double> qOrientation{};
-
-    ////3.0072975
-    ////    1.0
-    ////    - 11.6647 10.7203 31.5019
-    ////    - 0.729045991406439 0.670017179989159 0.9377355422484628
-    ////    - 0.6232360479056378 0.09444119273570384 - 0.3836658989859935 - 0.5579319140345902
-    ////    0.00985762603835613 0.00992922651096017 0.00935389874021005
-
-    //radius = 3.0;
-    //massDensity = 1.0;
-   
-
-    /*SpherePtr sphere = Sphere::Create();
-    sphere->setCenter(glm::vec3(0.f, 6.f, 0.f));
-    m_spheres.push_back(sphere);*/
-
-
-    mSimulationTime = 0.0f;
-    mSimulationDeltaTime = 0.01f;
 
     return true;
 }
 
-//
-//void Context::ComputeCollision()
-//{
-//    // init
-//    for (auto sphere : m_spheres)
-//        sphere->SetIntersected(false);
-//
-//    switch (static_cast<View>(m_view_type))
-//    {
-//    case View::VIEW_MODEL:
-//        break;
-//
-//    case View::VIEW_BROAD:
-//        if (is_broad_computation_necessary)
-//            SweepAndPrune();
-//    
-//        for (auto pair : m_broad_colliding_spheres)
-//        {
-//            pair.first->SetIntersected(true);
-//            pair.second->SetIntersected(true);
-//        }
-//        
-//        is_broad_computation_necessary = false;
-//        break;
-//
-//    case View::VIEW_NARROW:
-//        if (is_narrow_computation_necessary)
-//            FindActuallyOverlappedSpheres();
-//
-//        for (auto pair : m_narrow_colliding_spheres)
-//        {
-//            pair.first->SetIntersected(true);
-//            pair.second->SetIntersected(true);
-//        }
-//
-//        is_narrow_computation_necessary = false;
-//        break;
-//
-//    case View::VIEW_PENETRATION:
-//        if (is_narrow_computation_necessary)
-//            FindActuallyOverlappedSpheres();
-//
-//        for (auto pair : m_narrow_colliding_spheres)
-//        {
-//            pair.first->SetIntersected(true);
-//            pair.second->SetIntersected(true);
-//        }
-//
-//        is_narrow_computation_necessary = false;
-//        break;
-//    }
-//}
-//
-//void Context::SweepAndPrune()
-//{
-//    m_broad_colliding_spheres.clear();
-//
-//    std::vector<COLLIDING_SPHERE_PAIR> x_colliding_spheres;
-//    std::vector<COLLIDING_SPHERE_PAIR> y_colliding_spheres;
-//    std::vector<COLLIDING_SPHERE_PAIR> z_colliding_spheres;
-//
-//    // x-axis
-//    {
-//        std::vector<CompareHelper> helpers;
-//
-//        for (auto sphere : m_spheres)
-//        {
-//            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_start_position.x, true));
-//            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_end_position.x, false));
-//        }
-//
-//        sort(helpers.begin(), helpers.end(), CompareHelper::compare);
-//        FindCollidingSpheres(helpers, x_colliding_spheres);
-//    }
-//
-//    // y-axis
-//    {
-//        std::vector<CompareHelper> helpers;
-//
-//        for (auto sphere : m_spheres)
-//        {
-//            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_start_position.y, true));
-//            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_end_position.y, false));
-//        }
-//
-//        sort(helpers.begin(), helpers.end(), CompareHelper::compare);
-//        FindCollidingSpheres(helpers, y_colliding_spheres);
-//    }
-//
-//    // z-axis
-//    {
-//        std::vector<CompareHelper> helpers;
-//
-//        for (auto sphere : m_spheres)
-//        {
-//            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_start_position.z, true));
-//            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_end_position.z, false));
-//        }
-//
-//        sort(helpers.begin(), helpers.end(), CompareHelper::compare);
-//        FindCollidingSpheres(helpers, z_colliding_spheres);
-//    }
-//    
-//    auto temp_output = Intersection(x_colliding_spheres, y_colliding_spheres);
-//    m_broad_colliding_spheres = Intersection(temp_output, z_colliding_spheres);
-//
-//    // Log
-//    for (auto& e : m_broad_colliding_spheres)
-//    {
-//        std::cout << "[Intersected AABB]" << std::endl;
-//        std::cout << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
-//    }
-//}
-//
-//void Context::FindActuallyOverlappedSpheres()
-//{
-//    // init
-//    m_narrow_colliding_spheres.clear();
-//    m_lines.clear();
-//
-//    // get broad colliding pairs
-//    SweepAndPrune();
-//
-//    // cacluate narrow colliding pairs
-//    SPDLOG_INFO("penetration view log");
-//    for (auto broad_pair : m_broad_colliding_spheres)
-//    {
-//        auto first_sphere = broad_pair.first;
-//        auto second_sphere = broad_pair.second;
-//        auto distance = glm::distance(first_sphere->GetCenter(), second_sphere->GetCenter());
-//        auto radius_sum = first_sphere->GetRadius() + second_sphere->GetRadius();
-//        if (distance < radius_sum) {
-//            m_narrow_colliding_spheres.push_back(COLLIDING_SPHERE_PAIR(first_sphere, second_sphere));
-//            
-//            glm::vec3 ray = glm::normalize(second_sphere->GetCenter() - first_sphere->GetCenter());
-//            
-//            glm::vec3 penetrated_point1 = first_sphere->GetCenter() + first_sphere->GetRadius() * ray;
-//            glm::vec3 penetrated_point2 = second_sphere->GetCenter() - second_sphere->GetRadius() * ray;
-//
-//            m_lines.push_back(Line::Create(penetrated_point1, penetrated_point2));
-//            
-//            SPDLOG_INFO("p1: {}, {}, {} / p2: {}, {}, {}", penetrated_point1.x, penetrated_point1.y, penetrated_point1.z, penetrated_point2.x, penetrated_point2.y, penetrated_point2.z);
-//        }
-//    }
-//}
-//
-//void Context::FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_SPHERE_PAIR>& output)
-//{
-//    std::vector<CompareHelper> temp;
-//    for (auto helper : helpers)
-//    {
-//        if (helper.m_is_start)
-//        {
-//            for (auto t : temp)
-//            {
-//                output.push_back(COLLIDING_SPHERE_PAIR(helper.m_spherePtr, t.m_spherePtr));
-//            }
-//            temp.push_back(helper);
-//        }
-//        else
-//        {
-//            temp.erase(remove(temp.begin(), temp.end(), helper), temp.end());
-//        }
-//    }
-//}
-//
-//std::vector<COLLIDING_SPHERE_PAIR> Context::Intersection(const std::vector<COLLIDING_SPHERE_PAIR> v1, const std::vector<COLLIDING_SPHERE_PAIR> v2)
-//{
-//    std::vector<COLLIDING_SPHERE_PAIR> output;
-//    for (auto v1_e : v1)
-//    {
-//        for (auto v2_e : v2)
-//        {
-//            if ((v1_e.first == v2_e.first && v1_e.second == v2_e.second)
-//                || (v1_e.second == v2_e.first && v1_e.first == v2_e.second))
-//            {
-//                output.push_back(COLLIDING_SPHERE_PAIR(v1_e.first, v1_e.second));
-//            }
-//        }
-//    }
-//    return output;
-//}
 
-void Context::DoCollisionDetection()
+void Context::ComputeCollision()
 {
-    mContacts.clear();
+    // init
+    for (auto sphere : m_spheres)
+        sphere->SetIntersected(false);
 
-    // Test for sphere-plane collisions. These checks are done in pairs with
-    // the assumption that the sphere diameters are smaller than the distance
-    // between parallel planar boundaries. In this case, only one of each
-    // parallel pair of planes can be intersected at any time. Each pair of
-    // parallel planes is tested in order to handle the case when a sphere
-    // intersects two planes meeting at a region edge or three planes meeting
-    // at a region corner. When the sphere is partially or fully outside a
-    // plane, the interpenetration is removed to push the sphere back into
-    // the simulation region.
-    size_t const numSpheres = mRigidSphere.size();
-    std::vector<bool> moved(numSpheres, false);
-    double overlap{};
-    for (size_t i = 0; i < numSpheres; ++i)
+    switch (static_cast<View>(m_view_type))
     {
-        mRigidSphere[i]->UpdateWorldQuantities();
-        auto const& sphere = mRigidSphere[i]->m_sphere;
+    case View::VIEW_MODEL:
+        break;
 
-        // Test for the sphere intersecting or occurring outside an
-        // x-constant plane.
-        overlap = sphere->GetRadius() - mRigidPlane[0]->GetSignedDistance(sphere->GetCenter());
-        if (overlap > 0.0)
+    case View::VIEW_BROAD:
+        SweepAndPrune();
+        for (auto pair : m_broad_colliding_spheres)
         {
-            moved[i] = SetSpherePlaneContact(
-                mRigidSphere[i], mRigidPlane[0], overlap);
+            pair.first->SetIntersected(true);
+            pair.second->SetIntersected(true);
         }
-        else
+        break;
+
+    case View::VIEW_NARROW:
+        FindActuallyOverlappedSpheres();
+        for (auto pair : m_narrow_colliding_spheres)
         {
-            overlap = sphere->GetRadius() - mRigidPlane[3]->GetSignedDistance(sphere->GetCenter());
-            if (overlap > 0.0)
-            {
-                moved[i] = SetSpherePlaneContact(
-                    mRigidSphere[i], mRigidPlane[3], overlap);
-            }
+            pair.first->SetIntersected(true);
+            pair.second->SetIntersected(true);
+        }
+        break;
+
+    case View::VIEW_PENETRATION:
+        FindActuallyOverlappedSpheres();
+        for (auto pair : m_narrow_colliding_spheres)
+        {
+            pair.first->SetIntersected(true);
+            pair.second->SetIntersected(true);
+        }
+        break;
+    }
+}
+
+void Context::SweepAndPrune()
+{
+    m_broad_colliding_spheres.clear();
+
+    std::vector<COLLIDING_SPHERE_PAIR> x_colliding_spheres;
+    std::vector<COLLIDING_SPHERE_PAIR> y_colliding_spheres;
+    std::vector<COLLIDING_SPHERE_PAIR> z_colliding_spheres;
+
+    // x-axis
+    {
+        std::vector<CompareHelper> helpers;
+
+        for (auto sphere : m_spheres)
+        {
+            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_start_position.x, true));
+            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_end_position.x, false));
         }
 
-        // Test for the sphere intersection or occurring outside a
-        // y-constant plane.
-        overlap = sphere->GetRadius() - mRigidPlane[1]->GetSignedDistance(sphere->GetCenter());
-        if (overlap > 0.0)
-        {
-            moved[i] = SetSpherePlaneContact(
-                mRigidSphere[i], mRigidPlane[1], overlap);
-        }
-        else
-        {
-            overlap = sphere->GetRadius() - mRigidPlane[4]->GetSignedDistance(sphere->GetCenter());
-            if (overlap > 0.0)
-            {
-                moved[i] = SetSpherePlaneContact(
-                    mRigidSphere[i], mRigidPlane[4], overlap);
-            }
-        }
-
-        // Test for the sphere intersecting or occurring outside a
-        // z-constant plane.
-        overlap = sphere->GetRadius() - mRigidPlane[2]->GetSignedDistance(sphere->GetCenter());
-        if (overlap > 0.0)
-        {
-            moved[i] = SetSpherePlaneContact(
-                mRigidSphere[i], mRigidPlane[2], overlap);
-        }
-        else
-        {
-            overlap = sphere->GetRadius() - mRigidPlane[5]->GetSignedDistance(sphere->GetCenter());
-            if (overlap > 0.0)
-            {
-                moved[i] = SetSpherePlaneContact(
-                    mRigidSphere[i], mRigidPlane[5], overlap);
-            }
-        }
+        sort(helpers.begin(), helpers.end(), CompareHelper::compare);
+        FindCollidingSpheres(helpers, x_colliding_spheres);
     }
 
-    // Test for sphere-sphere collisions.
-    for (size_t i0 = 0; i0 + 1 < numSpheres; ++i0)
+    // y-axis
     {
-        auto const& sphere0 = mRigidSphere[i0]->m_sphere;
+        std::vector<CompareHelper> helpers;
 
-        for (size_t i1 = i0 + 1; i1 < numSpheres; ++i1)
+        for (auto sphere : m_spheres)
         {
-            auto const& sphere1 = mRigidSphere[i1] -> m_sphere;
+            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_start_position.y, true));
+            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_end_position.y, false));
+        }
 
-            // Test for overlap of sphere i0 and sphere i1.
-            auto delta = sphere1->GetCenter() - sphere0->GetCenter();
-            double lengthDelta = glm::length(delta);
-            overlap = sphere0->GetRadius() + sphere1->GetRadius() - lengthDelta;
-            if (overlap > 0.0)
-            {
-                UndoSphereOverlap(mRigidSphere[i0], mRigidSphere[i1],
-                    overlap, moved[i0], moved[i1]);
-            }
+        sort(helpers.begin(), helpers.end(), CompareHelper::compare);
+        FindCollidingSpheres(helpers, y_colliding_spheres);
+    }
+
+    // z-axis
+    {
+        std::vector<CompareHelper> helpers;
+
+        for (auto sphere : m_spheres)
+        {
+            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_start_position.z, true));
+            helpers.push_back(CompareHelper(sphere, sphere->GetAABB()->m_end_position.z, false));
+        }
+
+        sort(helpers.begin(), helpers.end(), CompareHelper::compare);
+        FindCollidingSpheres(helpers, z_colliding_spheres);
+    }
+    
+    auto temp_output = Intersection(x_colliding_spheres, y_colliding_spheres);
+    m_broad_colliding_spheres = Intersection(temp_output, z_colliding_spheres);
+
+    // Log
+    for (auto& e : m_broad_colliding_spheres)
+    {
+        std::cout << "[Intersected AABB]" << std::endl;
+        std::cout << *e.first->GetAABB() << std::endl << *e.second->GetAABB() << std::endl;
+    }
+}
+
+void Context::FindActuallyOverlappedSpheres()
+{
+    // init
+    m_narrow_colliding_spheres.clear();
+    m_lines.clear();
+
+    // get broad colliding pairs
+    SweepAndPrune();
+
+    // cacluate narrow colliding pairs
+    SPDLOG_INFO("penetration view log");
+    for (auto broad_pair : m_broad_colliding_spheres)
+    {
+        auto first_sphere = broad_pair.first;
+        auto second_sphere = broad_pair.second;
+        auto distance = glm::distance(first_sphere->GetCenter(), second_sphere->GetCenter());
+        auto radius_sum = first_sphere->GetRadius() + second_sphere->GetRadius();
+        if (distance < radius_sum) {
+            m_narrow_colliding_spheres.push_back(COLLIDING_SPHERE_PAIR(first_sphere, second_sphere));
+            
+            glm::vec3 ray = glm::normalize(second_sphere->GetCenter() - first_sphere->GetCenter());
+            
+            glm::vec3 penetrated_point1 = first_sphere->GetCenter() + first_sphere->GetRadius() * ray;
+            glm::vec3 penetrated_point2 = second_sphere->GetCenter() - second_sphere->GetRadius() * ray;
+
+            m_lines.push_back(Line::Create(penetrated_point1, penetrated_point2));
+            
+            SPDLOG_INFO("p1: {}, {}, {} / p2: {}, {}, {}", penetrated_point1.x, penetrated_point1.y, penetrated_point1.z, penetrated_point2.x, penetrated_point2.y, penetrated_point2.z);
         }
     }
 }
 
-void Context::DoCollisionResponse(double time, double deltaTime)
+void Context::FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_SPHERE_PAIR>& output)
 {
-    // Apply the instantaneous impulse forces at the current time.
-    for (auto& contact : mContacts)
+    std::vector<CompareHelper> temp;
+    for (auto helper : helpers)
     {
-        contact.ApplyImpulse();
-    }
-
-    for (size_t i = 0; i < mRigidSphere.size(); ++i)
-    {
-        // Solve the equations of motion.
-        mRigidSphere[i]->Update(time, deltaTime);
+        if (helper.m_is_start)
+        {
+            for (auto t : temp)
+            {
+                output.push_back(COLLIDING_SPHERE_PAIR(helper.m_spherePtr, t.m_spherePtr));
+            }
+            temp.push_back(helper);
+        }
+        else
+        {
+            temp.erase(remove(temp.begin(), temp.end(), helper), temp.end());
+        }
     }
 }
 
-void Context::initializeSpheres()
+std::vector<COLLIDING_SPHERE_PAIR> Context::Intersection(const std::vector<COLLIDING_SPHERE_PAIR> v1, const std::vector<COLLIDING_SPHERE_PAIR> v2)
 {
-    int i = 0;
-    mRigidSphere[i]->Force = [this, i](double, RigidBodyState<double> const& state)
+    std::vector<COLLIDING_SPHERE_PAIR> output;
+    for (auto v1_e : v1)
     {
-        // The only external force is gravity.
-        double constexpr gravityConstant = 9.81;   // m/sec^2
-        Vector3<double> gravityDirection{ 0.0, -1.0, 0.0 };
-        Vector3<double> gravityForce =
-            (state.GetMass() * gravityConstant) * gravityDirection;
-
-        // Take into account friction when the spheres are sliding on the
-        // floor.
-        double constexpr epsilon = 1e-03;
-        Vector3<double> frictionForce{ 0.0, 0.0, 0.0 };
-        double z = state.GetPosition()[2];
-        double radius = mRigidSphere[i]->m_sphere->GetRadius();
-        if (z - radius <= epsilon)
+        for (auto v2_e : v2)
         {
-            double constexpr viscosity = 1000.0;
-            Vector3<double> linearVelocity = state.GetLinearVelocity();
-            Normalize(linearVelocity);
-            frictionForce = -viscosity * linearVelocity;
-            frictionForce[2] = 0.0;
+            if ((v1_e.first == v2_e.first && v1_e.second == v2_e.second)
+                || (v1_e.second == v2_e.first && v1_e.first == v2_e.second))
+            {
+                output.push_back(COLLIDING_SPHERE_PAIR(v1_e.first, v1_e.second));
+            }
         }
+    }
+    return output;
+}
 
-        return gravityForce + frictionForce;
-    };
+void Context::FindAllCollisions()
+{
+    //// find contact between spheres
+    //FindActuallyOverlappedSpheres();
+    //m_narrow_colliding_spheres;
 
-    mRigidSphere[i]->Torque = [this, i](double, RigidBodyState<double> const& state)
+    // find contact between sphere and plane
+    for (auto& sphere : m_spheres)
     {
-        // No external torque is applied. However, take into account friction
-        // when the spheres are spinning on the floor.
-        double constexpr epsilon = 1e-03;
-        Vector3<double> torque{ 0.0, 0.0, 0.0 };
-        double z = state.GetPosition()[2];
-        double radius = mRigidSphere[i]->m_sphere->GetRadius();
-        if (z - radius <= epsilon)
+        float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
+        bool is_close = sphere->GetCenter().y < sphere->GetRadius();
+        if (is_close && v_rel < 0.f)
         {
-            double constexpr viscosity = 1000.0;
-            Vector3<double> angularVelocity = state.GetAngularVelocity();
-            Normalize(angularVelocity);
-            Vector3<double> newAngularVelocity = -viscosity * angularVelocity;
-            Vector3<double> newAngularMomentum = state.GetWorldInertia() * newAngularVelocity;
-            torque = newAngularMomentum;
+            auto contact = Contact::Create(sphere, m_plane, sphere->GetCenter() - glm::vec3(0, sphere->GetRadius(), 0), glm::vec3(0, 1, 0));
+            m_contacts.push_back(contact);
         }
-        return torque;
-    };
+    }
+
+    bool had_collision;
+    const double epsilon = 0.5f;
+
+    do {
+        for (auto& contact : m_contacts)
+        {
+            if (IsColliding(contact))
+            {
+                Collision(contact);
+
+            }
+        }
+    } while (had_collision == true);
+
+    //for (auto& sphere : m_spheres)
+    //{
+    //    float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
+    //    bool is_close = sphere->GetCenter().y < sphere->GetRadius();
+    //    if (is_close && v_rel < 0.f)
+    //    {
+    //        float j = -sphere->m_mass * (1 + m_coefficient_of_restitution) * v_rel;
+    //        glm::vec3 impulse = glm::vec3(0, j, 0);
+    //        sphere->m_momentum += impulse;
+    //        sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+    //    }
+    //}
+    
+}
+
+bool Context::IsColliding(const ContactPtr contact)
+{
+    auto& a = contact->a;
+    auto& b = contact->b;
+
+    glm::vec3 padot = typeid(a) == typeid(SpherePtr) ?
+        a->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
+
+    glm::vec3 pbdot = typeid(b) == typeid(SpherePtr) ?
+        b->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
+
+    float vrel = glm::dot(contact->n, padot - pbdot);
+    
+    if (vrel < m_colliding_threshold)
+        return true;
+}
+
+void Context::Collision(const ContactPtr contact)
+{
+    auto& a = contact->a;
+    auto& b = contact->b;
+
+    glm::vec3 padot = typeid(a) == typeid(SpherePtr) ?
+        a->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
+
+    glm::vec3 pbdot = typeid(b) == typeid(SpherePtr) ?
+        b->m_velocity : glm::vec3{ 0.f, 0.f, 0.f };
+
+    glm::vec3 n = contact->n;
+
+    //auto ra = typeid(a) == typeid(SpherePtr) ?
+    //    dynamic_cast<Sphere*>(rbp)
 }
 
 void Context::ResetCamera()

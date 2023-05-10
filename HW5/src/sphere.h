@@ -4,23 +4,22 @@
 #include "common.h"
 #include "model.h"
 #include "AABB.h"
-#include <glm/glm.hpp>
+#include "rigidbody.h"
 
 CLASS_PTR(Sphere);
-class Sphere {
+class Sphere: public RigidBody {
 public:
     static SpherePtr Create();
-    void Render(const Program* program);
+    void Render(const Program* program, const View view_type);
     bool Init();
 
-    void SetIntersected(const bool is_Intersected);
+    inline const glm::vec3& GetColor() { return m_color; }
+    inline const glm::vec3& GetCenter() { return m_center; }
+    inline const float GetRadius() { return m_radius; }
+    inline const AABBPtr GetAABB() { return m_AABB; }
 
-    const glm::vec3& GetColor();
-    const glm::vec3& GetCenter();
-    const float GetRadius();
-    const AABBPtr GetAABB();
-
-    void setRadius(const float radius);
+    inline void SetIntersected(const bool is_Intersected) { m_isIntersected = is_Intersected; }
+    inline void setRadius(const float radius) { m_radius = radius; }
     void setCenter(const glm::vec3& center);
 
     friend std::ostream& operator << (std::ostream& out, const Sphere& sphere)
@@ -30,7 +29,10 @@ public:
         return out; // for chaining
     }
 
-    ~Sphere();
+    ~Sphere() {}
+
+    void move(const glm::vec3 force, const float timestep);
+
 private:
     Sphere() {}
 

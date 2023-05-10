@@ -11,11 +11,8 @@
 #include "model.h"
 #include "sphere.h"
 #include "line.h"
-
-#include "RigidPlane.h"
-#include "RigidSphere.h"
-
-using namespace gte;
+#include "plane.h"
+#include "contact.h"
 
 class CompareHelper {
 public:
@@ -40,7 +37,6 @@ public:
 
 using COLLIDING_SPHERE_PAIR = std::pair<SpherePtr, SpherePtr>;
 
-
 CLASS_PTR(Context)
 class Context {
 public:
@@ -55,42 +51,15 @@ public:
     void ResetCamera();
 
     void InitializeEnvParameter();
-    /*void ComputeCollision();
+    void ComputeCollision();
     void SweepAndPrune();
     void FindActuallyOverlappedSpheres();
     void FindCollidingSpheres(std::vector<CompareHelper> helpers, std::vector<COLLIDING_SPHERE_PAIR>& output);
-    std::vector<COLLIDING_SPHERE_PAIR> Intersection(const std::vector<COLLIDING_SPHERE_PAIR> v1, const std::vector<COLLIDING_SPHERE_PAIR> v2);*/
+    std::vector<COLLIDING_SPHERE_PAIR> Intersection(const std::vector<COLLIDING_SPHERE_PAIR> v1, const std::vector<COLLIDING_SPHERE_PAIR> v2);
 
-    void DoCollisionDetection();
-    void DoCollisionResponse(double time, double deltaTime);
-
-
-    void initializeSpheres();
-
-    using Contact = RigidBodyContact<double>;
-
-    bool SetSpherePlaneContact(std::shared_ptr<RigidSphere> const& rigidSphere,
-        std::shared_ptr<RigidPlane> const& rigidPlane, double overlap);
-
-    void UndoSphereOverlap(
-        std::shared_ptr<RigidSphere> const& rigidSphere0,
-        std::shared_ptr<RigidSphere> const& rigidSphere1,
-        double overlap, bool moved0, bool moved1);
-
-    // Physical representations of solid spheres.
-    std::vector<std::shared_ptr<RigidSphere>> mRigidSphere;
-
-    // Physical representation of planar boundaries.
-    //std::array<std::shared_ptr<RigidPlane>, 6> mRigidPlane;
-
-    // Contact points during one pass of the physical simulation.
-    std::vector<Contact> mContacts;
-    double mRestitution;
-
-    // Physical representation of planar boundaries.
-    std::array<std::shared_ptr<RigidPlane>, 6> mRigidPlane;
-    //std::vector<std::shared_ptr<RigidSphere>> mRigidSphere;
-    double mSimulationTime, mSimulationDeltaTime;
+    void FindAllCollisions();
+    bool IsColliding(const ContactPtr contact);
+    void Collision(const ContactPtr contact);
 
 private:
     Context() {}
@@ -102,10 +71,10 @@ private:
     int m_height{ 900 };
 
     // clear color
-    glm::vec4 m_clearColor{ glm::vec4(0.0f, 0.0f, 0.0f, 0.0f) };
+    glm::vec4 m_clearColor{ glm::vec4(0.8f, 0.8f, 0.8f, 1.f) };
 
     // light parameter
-    glm::vec3 m_lightPos{ 0.f, 10.f, 5.f };
+    glm::vec3 m_lightPos{ 0.f, 10.f, 0.f};
     glm::vec3 m_lightColor{ 0.f, 0.f, 0.f };
 
     // camera parameter
@@ -117,25 +86,30 @@ private:
     float m_cameraPitch { 0.0f };
     float m_cameraYaw { 0.0f };
 
-    glm::vec3 m_cameraFront { glm::vec3(0.0f, -1.0f, 0.0f) };
-    glm::vec3 m_cameraPos { glm::vec3(0.0f, 5.0f, 30.0f) };
-    glm::vec3 m_cameraUp { glm::vec3(0.0f, 1.f, 0.0f) };
+    glm::vec3 m_cameraFront { glm::vec3(0.0f, 0.0f, 0.0f) };
+    glm::vec3 m_cameraPos { glm::vec3(0.0f, 3.0f, 20.0f) };
+    glm::vec3 m_cameraUp { glm::vec3(0.0f, 1.0f, 0.0f) };
 
     const float m_mouse_force_scale = 0.1f;
     glm::vec3 m_mouse_force{ glm::vec3(0.f, 0.f, 0.f) };
 
     // collision detection
+    std::vector<SpherePtr> m_spheres;
     std::vector<LinePtr> m_lines;
+    PlanePtr m_plane;
     
-
     std::vector<COLLIDING_SPHERE_PAIR> m_broad_colliding_spheres;
     std::vector<COLLIDING_SPHERE_PAIR> m_narrow_colliding_spheres;
 
-    bool is_broad_computation_necessary = true;
-    bool is_narrow_computation_necessary = true;
-    
+    std::vector<ContactPtr> m_contacts;
+
     // UI
     int m_view_type = static_cast<int>(View::VIEW_MODEL);
+
+    // collision
+    float m_timestep = 0.01f;
+    float m_gravity = -9.8f;
+    float m_colliding_threshold = 0.05f;
 };
 
 #endif // __CONTEXT_H__

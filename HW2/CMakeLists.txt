@@ -10,7 +10,7 @@ add_executable(HW2
     src/texture.cpp src/texture.h
     src/mesh.cpp src/mesh.h
     src/model.cpp src/model.h
-)
+ )
 
 # TODO: Add tests and install targets if needed.
 find_package(glad CONFIG REQUIRED)

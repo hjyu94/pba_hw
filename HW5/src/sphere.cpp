@@ -1,4 +1,5 @@
 #include "sphere.h"
+#include "math.h"
 
 SpherePtr Sphere::Create() {
     SpherePtr sphere = SpherePtr(new Sphere());
@@ -7,13 +8,41 @@ SpherePtr Sphere::Create() {
     return sphere;
 }
 
-void Sphere::Render(const Program* program) {
+void Sphere::Render(const Program* program, const View view_type) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, this->m_center);
+    
+    m_quaternion = glm::normalize(m_quaternion);
+    auto axis = glm::axis(m_quaternion);
+    auto angle = glm::angle(m_quaternion);
+    model = glm::rotate(model, angle, axis);
+
     model = glm::scale(model, glm::vec3(m_radius));
     program->SetUniform("model", model);
-    program->SetUniform("objectColor", m_color);
-    m_model->Draw(program);
+    
+    // set color
+    glm::vec3 objectColor;
+    switch (view_type)
+    {
+    case View::VIEW_MODEL:
+        objectColor = this->m_color;
+        break;
+
+    case View::VIEW_BROAD:
+    case View::VIEW_NARROW:
+        if (m_isIntersected)
+            objectColor = glm::vec3(1.f, 0.f, 0.f);
+        else
+            objectColor = glm::vec3(0.f, 1.f, 0.f);
+        break;
+
+    case View::VIEW_PENETRATION:
+        break;
+    }
+    program->SetUniform("objectColor", objectColor);
+
+    if(view_type != View::VIEW_PENETRATION)
+        m_model->Draw(program);
 }
 
 bool Sphere::Init() {
@@ -24,7 +53,7 @@ bool Sphere::Init() {
 
     m_center = glm::vec3(
         getRandomFloat(-3.f, 3.f),
-        getRandomFloat(5.f, 10.f),
+        getRandomFloat(-3.f, 3.f),
         getRandomFloat(-3.f, 3.f)
     );
 
@@ -45,37 +74,21 @@ bool Sphere::Init() {
     std::cout << *this << std::endl;
     std::cout << *m_AABB << std::endl;
 
+    m_mass = 1.f; // getRandomFloat(3.f, 5.f)
+    m_inertia = 0.4 * m_mass * m_radius * m_radius;
+
+    m_velocity = glm::vec3{ 1.f, 0.f, 0.f };
+    //m_velocity = glm::vec3{ 0.f, 0.f, 0.f };
+    m_momentum = m_mass * m_velocity;
+
+    m_angular_vel = glm::vec3{ 6.f, 6.f, 0.f };
+    //m_angular_vel = glm::vec3{ 0.f, 0.f, 0.f };
+    m_angular_momentum = m_inertia * m_angular_vel;
+
+    m_quaternion = glm::angleAxis(0.f, glm::normalize(m_angular_vel));
+    //m_quaternion = glm::quat(1.f, 0.f, 0.f, 0.f);
+ 
     return true;
-}
-
-void Sphere::SetIntersected(const bool is_Intersected)
-{
-    m_isIntersected = is_Intersected;
-}
-
-const glm::vec3& Sphere::GetColor()
-{
-    return m_color;
-}
-
-const glm::vec3& Sphere::GetCenter()
-{
-    return m_center;
-}
-
-const float Sphere::GetRadius()
-{
-    return m_radius;
-}
-
-const AABBPtr Sphere::GetAABB()
-{
-    return m_AABB;
-}
-
-void Sphere::setRadius(const float radius)
-{
-    m_radius = radius;
 }
 
 void Sphere::setCenter(const glm::vec3& center)
@@ -87,7 +100,11 @@ void Sphere::setCenter(const glm::vec3& center)
     );
 }
 
-Sphere::~Sphere()
+void Sphere::move(const glm::vec3 force, const float timestep)
 {
-
+    m_momentum += timestep * force;
+    m_angular_vel = (1 / m_inertia) * m_angular_momentum;
+    m_velocity = m_momentum / m_mass;
+    setCenter(m_center + timestep * m_velocity);
+    m_quaternion += timestep * 0.5f * glm::angleAxis(glm::radians(180.f), m_angular_vel) * m_quaternion;
 }

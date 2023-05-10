@@ -3,20 +3,24 @@
 
 #include "common.h"
 #include "program.h"
-#include "model.h"
+#include "rigidbody.h"
 
-CLASS_PTR(Plane)
-class Plane {
+CLASS_PTR(Plane);
+class Plane: public RigidBody {
 public:
-    static PlaneUPtr Create();
+    static PlanePtr Create();
     void Render(const Program* program);
     bool Init();
-    ~Plane();
+    
+    float m_x = 5.f;
+    float m_z = 5.f;
 
 private:
-    Plane() {};
-    ModelUPtr m_model;
-    glm::vec3 m_color{ glm::vec3(0.7f, 0.7f, .3f) };
+    Plane() {}
+
+    uint32_t m_vbo{ 0 };
+    uint32_t m_vao{ 0 };
+    uint32_t m_ebo{ 0 };
 };
 
 #endif // __PLANE_H__

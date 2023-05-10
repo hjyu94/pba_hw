@@ -15,12 +15,8 @@ add_executable(${PROJECT_NAME}
     src/sphere.cpp src/sphere.h
     src/AABB.cpp src/AABB.h
     src/line.cpp src/line.h
-    src/PolyhedralMassProperties.h src/RigidBody.h
-    src/plane.h src/plane.cpp
-    src/RigidSphere.h src/RigidSphere.cpp
-)
-
- target_include_directories(${PROJECT_NAME} PUBLIC "./include")
+    src/plane.cpp src/plane.h
+ "src/rigidbody.h" "contact.h")
 
 # TODO: Add tests and install targets if needed.
 find_package(glad CONFIG REQUIRED)
@@ -42,6 +38,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_compile_definitions(${PROJECT_NAME} PUBLIC
     CURRENT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
-
-
-
