@@ -16,7 +16,7 @@ add_executable(${PROJECT_NAME}
     src/AABB.cpp src/AABB.h
     src/line.cpp src/line.h
     src/plane.cpp src/plane.h
- "src/rigidbody.h" "contact.h")
+)
 
 # TODO: Add tests and install targets if needed.
 find_package(glad CONFIG REQUIRED)

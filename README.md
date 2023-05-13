@@ -17,9 +17,9 @@ mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE="$Env:cmake_toolchain_file" -S ../ -B ./
 cmake --build .
-cd HW{number}/Debug
-./HW{number}.exe
+cd HW5\Debug
+.\HW5.exe
 ```
 
 ### Run executable file directly without build (Windows)
-- HW3: pha_hw/release/HW3/HW3.exe
+- HW5: pha_hw\executable\HW5\HW5.exe
