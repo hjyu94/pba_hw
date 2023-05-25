@@ -100,12 +100,13 @@ private:
     int m_view_type = static_cast<int>(View::VIEW_MODEL);
 
     // collision
-    float m_timestep = 0.05f;
+    float m_timestep = 0.01f;
     float m_gravity = -9.8f;
     float m_colliding_threshold = 0.05f;
 
     float is_paused = false;
-    float epsilon = 0.01f;
+    float distance_epsilon = 0.01f;
+    float v_epsilon = 0.6f;
 };
 
 #endif // __CONTEXT_H__

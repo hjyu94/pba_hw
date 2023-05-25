@@ -76,18 +76,16 @@ void Context::Update()
     if (is_paused)
         return;
 
-    // collision detection
+    // 1) collision detection, collision response
     // floor ~ sphere
     for (auto& sphere : m_spheres)
     {
         float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
-        bool is_close = sphere->GetCenter().y - sphere->GetRadius() < epsilon
+        bool is_close = sphere->GetCenter().y - sphere->GetRadius() < distance_epsilon
             && glm::abs(sphere->GetCenter().x) <= m_plane->m_x
             && glm::abs(sphere->GetCenter().z) <= m_plane->m_z;
-        if (is_close && v_rel < 0.f)
+        if (is_close && v_rel < - v_epsilon)
         {
-            //auto contact = Contact::Create(sphere, m_plane, sphere->GetCenter() - glm::vec3(0, sphere->GetRadius(), 0), glm::vec3(0, 1, 0));
-            //m_contacts.push_back(contact);
             auto pa = glm::vec3(sphere->GetCenter().x, 0, sphere->GetCenter().z);
             auto padot = sphere->m_velocity + glm::cross(sphere->m_angular_vel, pa - sphere->GetCenter());
             auto n = glm::vec3(0, 1, 0);
@@ -129,7 +127,7 @@ void Context::Update()
             auto sphere = s1;
             auto vrel = glm::dot(n1, p1dot - p2dot);
 
-            if (vrel < 0)
+            if (vrel < -v_epsilon)
             {
                 auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
                     ((1 / s1->m_mass) + (1 / s2->m_mass)
@@ -150,7 +148,7 @@ void Context::Update()
             auto sphere = s2;
             auto vrel = glm::dot(n2, p2dot - p1dot);
             
-            if (vrel < 0)
+            if (vrel < -v_epsilon)
             {
                 auto j = -(1 + sphere->m_coefficient_of_restitution) * vrel /
                     ((1 / s1->m_mass) + (1 / s2->m_mass)
@@ -167,14 +165,97 @@ void Context::Update()
         }
     }
 
-    // move
+    // 2) resting contact
+    // floor ~ sphere
     for (auto& sphere : m_spheres)
     {
-        bool isClose = sphere->GetCenter().y - sphere->GetRadius() < epsilon
+        float v_rel = glm::dot(sphere->m_velocity, glm::vec3(0, 1, 0));
+        bool is_close = sphere->GetCenter().y - sphere->GetRadius() < distance_epsilon
             && glm::abs(sphere->GetCenter().x) <= m_plane->m_x
             && glm::abs(sphere->GetCenter().z) <= m_plane->m_z;
+        if (is_close && abs(v_rel) < v_epsilon)
+        {
+            auto pa = glm::vec3(sphere->GetCenter().x, 0, sphere->GetCenter().z);
+            auto padot = sphere->m_velocity + glm::cross(sphere->m_angular_vel, pa - sphere->GetCenter());
+            auto n = glm::vec3(0, 1, 0);
+            auto vrel = glm::dot(n, padot);
+            auto ra = pa - sphere->GetCenter();
+            auto j = - vrel / ((1 / sphere->m_mass) + glm::dot(n, (1 / sphere->m_inertia) * glm::cross(glm::cross(ra, n), ra)));
+
+            sphere->m_momentum += j * n;
+            sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+
+            sphere->m_angular_momentum += glm::cross(ra, j * n);
+            sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+        }
+    }
+
+    // sphere ~ sphere
+    for (auto& pair : m_narrow_colliding_spheres)
+    {
+        auto s1 = pair.first;
+        auto s2 = pair.second;
+
+        auto p1 = s1->GetCenter() + s1->GetRadius() * glm::normalize(s2->GetCenter() - s1->GetCenter());
+        auto p1dot = s1->m_velocity + glm::cross(s1->m_angular_vel, p1 - s1->GetCenter());
+
+        auto p2 = s2->GetCenter() + s2->GetRadius() * glm::normalize(s1->GetCenter() - s2->GetCenter());
+        auto p2dot = s2->m_velocity + glm::cross(s2->m_angular_vel, p2 - s2->GetCenter());
+
+        auto n1 = glm::normalize(s1->GetCenter() - s2->GetCenter());
+        auto n2 = glm::normalize(s2->GetCenter() - s1->GetCenter());
+
+        auto ra1 = p1 - s1->GetCenter();
+        auto ra2 = p2 - s2->GetCenter();
+
+        // for s1
+        {
+            auto sphere = s1;
+            auto vrel = glm::dot(n1, p1dot - p2dot);
+
+            if (abs(vrel) < v_epsilon)
+            {
+                auto j = - vrel /
+                    ((1 / s1->m_mass) + (1 / s2->m_mass)
+                        + glm::dot(n1, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n1), ra1))
+                        + glm::dot(n1, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n1), ra2))
+                        );
+
+                sphere->m_momentum += j * n1;
+                sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+
+                sphere->m_angular_momentum += glm::cross(ra1, j * n1);
+                sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+            }
+        }
+
+        // for s2
+        {
+            auto sphere = s2;
+            auto vrel = glm::dot(n2, p2dot - p1dot);
+
+            if (abs(vrel) < v_epsilon)
+            {
+                auto j = - vrel /
+                    ((1 / s1->m_mass) + (1 / s2->m_mass)
+                        + glm::dot(n2, (1 / s1->m_inertia) * glm::cross(glm::cross(ra1, n2), ra1))
+                        + glm::dot(n2, (1 / s2->m_inertia) * glm::cross(glm::cross(ra2, n2), ra2))
+                        );
+
+                sphere->m_momentum += j * n2;
+                sphere->m_velocity = sphere->m_momentum / sphere->m_mass;
+
+                sphere->m_angular_momentum += glm::cross(ra2, j * n2);
+                sphere->m_angular_vel = (1 / sphere->m_inertia) * sphere->m_angular_momentum;
+            }
+        }
+    }
+
+    // 3) move
+    for (auto& sphere : m_spheres)
+    {
         glm::vec3 gravity = glm::vec3(0.f, m_gravity * sphere->m_mass, 0.f);
-        sphere->m_force = isClose ? glm::vec3(0.f, 0.f, 0.f) : gravity;
+        sphere->m_force = gravity;
         sphere->move(m_timestep);
     }
 }
@@ -215,15 +296,7 @@ void Context::Render(GLFWwindow* window)
                 ResetCamera();
         }
 
-        // select view type
-        if (ImGui::RadioButton("Model View", &m_view_type, (int)View::VIEW_MODEL))
-            ComputeCollision();
-        if (ImGui::RadioButton("Broad view", &m_view_type, (int)View::VIEW_BROAD))
-            ComputeCollision();
-        if (ImGui::RadioButton("Narrow view", &m_view_type, (int)View::VIEW_NARROW))
-            ComputeCollision();
-        if (ImGui::RadioButton("Penetration view", &m_view_type, (int)View::VIEW_PENETRATION))
-            ComputeCollision();
+        ImGui::DragFloat("Time Step", &m_timestep, 0.005f, 0.f, 0.5f, "%.2f");
     }
     ImGui::End();
     // end of ui
@@ -313,7 +386,6 @@ bool Context::Init() {
 
     SPDLOG_INFO("program id: {}", m_line_program->Get());
 
-    m_spheres.push_back(Sphere::Create());
     m_spheres.push_back(Sphere::Create());
 
     m_plane = Plane::Create();

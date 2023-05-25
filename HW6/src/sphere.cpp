@@ -83,7 +83,6 @@ bool Sphere::Init() {
         getRandomFloat(-0.8f, +0.8f)
     };
 
-    //m_velocity = glm::vec3{ 0.f, 0.f, 0.f };
     m_momentum = m_mass * m_velocity;
 
     m_angular_vel = glm::vec3{ 
@@ -92,11 +91,9 @@ bool Sphere::Init() {
         getRandomFloat(-0.5f, 0.5f)
     };
 
-    //m_angular_vel = glm::vec3{ 0.f, 0.f, 0.f };
     m_angular_momentum = m_inertia * m_angular_vel;
 
     m_quaternion = glm::angleAxis(0.f, glm::normalize(m_angular_vel));
-    //m_quaternion = glm::quat(1.f, 0.f, 0.f, 0.f);
  
     return true;
 }
