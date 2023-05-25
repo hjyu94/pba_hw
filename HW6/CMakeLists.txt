@@ -35,6 +35,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     assimp::assimp
 )
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CURRENT_SOURCE_DIR .)
+endif()
+
 target_compile_definitions(${PROJECT_NAME} PUBLIC
-    CURRENT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    CURRENT_SOURCE_DIR="${CURRENT_SOURCE_DIR}"
 )
